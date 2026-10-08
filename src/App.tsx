@@ -29,7 +29,6 @@ import {
   ensureResponsableAdmin,
   getStoreName,
   saveStoreName,
-  resetToCleanStore,
 } from './services/api';
 import { initOneSignal, requestPushPermission, checkPushPermission } from './services/onesignal';
 import { useOnlineStatus } from './hooks/useOnlineStatus';
@@ -175,17 +174,6 @@ export default function App() {
   // Initial Load: Config & Stored Employee
   useEffect(() => {
     if (!isTokenValidated) return;
-
-    // One-time automatic cleanup to ensure application starts from a virgin state
-    // (Responsable as Admin, blank notes, blank planning, example shifts preserved)
-    const isCleanSlate = localStorage.getItem('planning_clean_slate_v2') === 'true';
-    if (!isCleanSlate) {
-      resetToCleanStore(getStoreName());
-      localStorage.setItem('planning_clean_slate_v2', 'true');
-      localStorage.setItem(STORAGE_KEY_EMPLOYEE, 'Responsable');
-      setEmployees(DEFAULT_EMPLOYEES);
-      setCurrentEmployee(DEFAULT_EMPLOYEES[0]);
-    }
 
     const now = new Date();
     const currentMonthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;

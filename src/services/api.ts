@@ -135,7 +135,17 @@ if (typeof window !== 'undefined') {
         break;
       }
       case 'STORE_RESET': {
-        localStorage.clear();
+        if (typeof window !== 'undefined') {
+          const tokenVal = localStorage.getItem('planning_token_validated');
+          const apiToken = localStorage.getItem('planning_api_token');
+          const adminPin = localStorage.getItem('planning_admin_pin');
+          const store = localStorage.getItem(KEY_STORE_NAME);
+          localStorage.clear();
+          if (tokenVal) localStorage.setItem('planning_token_validated', tokenVal);
+          if (apiToken) localStorage.setItem('planning_api_token', apiToken);
+          if (adminPin) localStorage.setItem('planning_admin_pin', adminPin);
+          if (store) localStorage.setItem(KEY_STORE_NAME, store);
+        }
         notifyDataChange('STORE_RESET', msg);
         break;
       }
@@ -519,7 +529,13 @@ export async function resetToCleanStore(newStoreName?: string): Promise<void> {
     console.error('Failed to reset store on database:', err);
   }
   if (typeof window !== 'undefined') {
+    const tokenVal = localStorage.getItem('planning_token_validated');
+    const apiToken = localStorage.getItem('planning_api_token');
+    const adminPin = localStorage.getItem('planning_admin_pin');
     localStorage.clear();
+    if (tokenVal) localStorage.setItem('planning_token_validated', tokenVal);
+    if (apiToken) localStorage.setItem('planning_api_token', apiToken);
+    if (adminPin) localStorage.setItem('planning_admin_pin', adminPin);
     localStorage.setItem(KEY_STORE_NAME, store);
   }
 }
