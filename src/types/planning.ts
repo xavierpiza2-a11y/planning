@@ -1,0 +1,94 @@
+export interface Employee {
+  name: string;
+  color: string;
+  pin?: string;
+  role?: string;
+  isAdmin?: boolean;
+}
+
+export interface ShiftCategoryItem {
+  id: string;
+  name: string;
+  color?: string; // e.g. 'sky', 'amber', 'emerald', 'slate', 'orange', 'teal', 'purple', 'rose', 'indigo'
+  icon?: string; // e.g. 'sun', 'sunset', 'briefcase', 'home', 'palmtree', 'sparkles', 'graduation-cap', 'clock', 'coffee', 'shield', 'zap', 'tag'
+  badgeBg?: string;
+  badgeText?: string;
+  badgeBorder?: string;
+}
+
+export type ShiftCategory =
+  | 'MATIN'
+  | 'SOIR'
+  | 'JOURNEE'
+  | 'HORAIRE'
+  | 'REPOS'
+  | 'CONGES'
+  | 'RTT'
+  | 'FORMATION'
+  | 'AUTRE'
+  | (string & {});
+
+export interface DayShift {
+  shift: string;
+  hours?: string;
+  info?: string;
+}
+
+export type DayNotesMap = Record<string, string>;
+
+export interface EmployeeMonthSchedule {
+  employee: string;
+  month: string; // "YYYY-MM"
+  days: Record<string, DayShift>; // key is "YYYY-MM-DD"
+  totalHours?: number;
+  visibleMonths?: string[];
+  employees?: Employee[];
+  lastUpdate?: string;
+  generated?: string;
+  dayNotes?: Record<string, string>;
+}
+
+export interface MonthItem {
+  key: string; // "2026-09"
+  tab: string; // "SEPTEMBRE 26"
+  label: string; // "Septembre 2026"
+}
+
+export interface ConfigData {
+  storeName?: string;
+  employees: Employee[];
+  visibleMonths: string[];
+  allMonths: MonthItem[];
+  lastModified?: string;
+}
+
+export interface ChangeEntry {
+  id?: string;
+  date: string;
+  previousShift?: string;
+  newShift?: string;
+  previousHours?: string;
+  newHours?: string;
+  timestamp?: string;
+  comment?: string;
+}
+
+export interface HistoryEntry {
+  date: string;
+  employee: string;
+  change: string;
+  timestamp: string;
+}
+
+export interface Tableau2ShiftOption {
+  id: string;
+  shift: string;
+  hours: string;
+  category: string;
+  color?: string; // color ID e.g. 'emerald', 'sky', 'black', 'dark-gray', etc.
+  label: string;
+  description?: string;
+  hoursDecimal?: number;
+  dayStatus?: 'PRESENT' | 'REPOS' | 'ABSENT'; // Status in Team Day view: Présent, Repos, Absent
+}
+
