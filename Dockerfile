@@ -1,24 +1,24 @@
 # syntax=docker/dockerfile:1
-FROM node:22-alpine AS builder
+FROM oven/bun:1-alpine AS builder
 
 WORKDIR /app
 
-# Copy package files
-COPY package*.json ./
+# Copy dependency files
+COPY package.json bun.lock* ./
 
-# Install all dependencies for build
-RUN npm install
+# Install all dependencies with Bun (ultra-rapide, sans conflit)
+RUN bun install --frozen-lockfile || bun install
 
 # Copy application source code
 COPY . .
 
 # Build Vite frontend bundle
-RUN npm run build
+RUN bun run build
 
 # ----------------------------------------------------------------------------
 # Production Runner
 # ----------------------------------------------------------------------------
-FROM node:22-alpine AS runner
+FROM oven/bun:1-alpine AS runner
 
 WORKDIR /app
 
@@ -26,8 +26,8 @@ ENV NODE_ENV=production
 ENV PORT=3000
 
 # Copy package definitions and install only production dependencies
-COPY package*.json ./
-RUN npm install --omit=dev
+COPY package.json bun.lock* ./
+RUN bun install --production
 
 # Copy built frontend assets
 COPY --from=builder /app/dist ./dist
@@ -43,4 +43,4 @@ RUN mkdir -p /app/data
 
 EXPOSE 3000
 
-CMD ["node", "server.ts"]
+CMD ["bun", "run", "server.ts"]
