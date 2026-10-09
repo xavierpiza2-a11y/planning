@@ -6,3 +6,8 @@ coverage/
 *.log
 .env*
 !.env.example
+
+# Données persistantes locales (ne jamais écraser lors d'un git pull)
+data/*.json
+data/*.tmp
+!data/.gitkeep

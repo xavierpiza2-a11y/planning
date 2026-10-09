@@ -9,6 +9,7 @@ export function usePWAInstall() {
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [isInstalled, setIsInstalled] = useState(false);
   const [isIOS, setIsIOS] = useState(false);
+  const [isHttpExternal, setIsHttpExternal] = useState(false);
 
   useEffect(() => {
     // Detect standalone mode (already installed)
@@ -21,6 +22,13 @@ export function usePWAInstall() {
     const userAgent = window.navigator.userAgent.toLowerCase();
     const isIOSDevice = /iphone|ipad|ipod/.test(userAgent);
     setIsIOS(isIOSDevice);
+
+    // Detect insecure HTTP on non-localhost (blocks beforeinstallprompt in Chrome/Edge)
+    const isHttp =
+      window.location.protocol === 'http:' &&
+      window.location.hostname !== 'localhost' &&
+      window.location.hostname !== '127.0.0.1';
+    setIsHttpExternal(isHttp);
 
     const handleBeforeInstallPrompt = (e: Event) => {
       e.preventDefault();
@@ -57,6 +65,7 @@ export function usePWAInstall() {
     isInstallable: !!deferredPrompt,
     isInstalled,
     isIOS,
+    isHttpExternal,
     install,
   };
 }

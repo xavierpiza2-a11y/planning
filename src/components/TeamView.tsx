@@ -6,8 +6,7 @@ import { categorizeShift } from '../config/constants';
 import { exportTeamPlanningToPDF } from '../services/pdfExport';
 import { AdminShiftEditModal } from './AdminShiftEditModal';
 import { DayNoteModal } from './DayNoteModal';
-import { getStoredAdminPin } from './AdminView';
-import { getStoredTableau2Shifts, getStoredDayNotes } from '../services/api';
+import { getStoredTableau2Shifts, getStoredDayNotes, verifyAdminPin } from '../services/api';
 import {
   Users,
   Calendar,
@@ -347,10 +346,10 @@ export const TeamView: React.FC<TeamViewProps> = ({
   };
 
   // Verify PIN entered by user to activate Mode Admin
-  const handleVerifyPin = (e: React.FormEvent) => {
+  const handleVerifyPin = async (e: React.FormEvent) => {
     e.preventDefault();
-    const storedPin = getStoredAdminPin();
-    if (pinInput.trim() === storedPin.trim()) {
+    const isValid = await verifyAdminPin(pinInput.trim());
+    if (isValid) {
       setAdminActiveState(true);
       setIsPinModalOpen(false);
       if (pendingTarget) {

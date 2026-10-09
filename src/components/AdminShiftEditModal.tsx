@@ -1,7 +1,13 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Employee, MonthItem, Tableau2ShiftOption } from '../types/planning';
 import { DEFAULT_TABLEAU2_SHIFTS } from '../config/constants';
-import { fetchAvailableShifts, updateShiftInSheet, getStoredTableau2Shifts, getStoredDayNotes } from '../services/api';
+import {
+  fetchAvailableShifts,
+  updateShiftInSheet,
+  getStoredTableau2Shifts,
+  getStoredDayNotes,
+  saveStoredDayNotes,
+} from '../services/api';
 import { CATEGORY_COLORS } from '../config/categoryStyles';
 import {
   X,
@@ -141,6 +147,23 @@ export const AdminShiftEditModal: React.FC<AdminShiftEditModalProps> = ({
         chosenOption.hours,
         dayNoteInput
       );
+
+      // Synchronize day note to collective calendar if modified
+      try {
+        const currentNotes = getStoredDayNotes(selectedMonth);
+        const trimmedNote = (dayNoteInput || '').trim();
+        if ((currentNotes[targetDate] || '') !== trimmedNote) {
+          const updatedNotes = { ...currentNotes };
+          if (trimmedNote) {
+            updatedNotes[targetDate] = trimmedNote;
+          } else {
+            delete updatedNotes[targetDate];
+          }
+          await saveStoredDayNotes(selectedMonth, updatedNotes);
+        }
+      } catch (noteErr) {
+        console.warn('Note save non-blocking warning:', noteErr);
+      }
 
       if (res.success) {
         setStatusMessage({

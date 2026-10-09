@@ -150,7 +150,49 @@ app.post('/api/config', async (req, res) => {
       type: 'CONFIG_UPDATED',
       config: updated,
     });
+
+    if (req.body.apiToken) {
+      broadcast({
+        type: 'TOKEN_CHANGED',
+        newToken: req.body.apiToken.trim().toUpperCase(),
+      });
+    }
+    if (req.body.adminPin) {
+      broadcast({
+        type: 'PIN_CHANGED',
+        newPin: req.body.adminPin.trim(),
+      });
+    }
+
     res.json({ success: true, config: updated });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+app.post('/api/verify-token', async (req, res) => {
+  try {
+    const { token } = req.body;
+    const config = await dbGetConfig();
+    const serverToken = (config.apiToken || 'PLANNING').trim().toUpperCase();
+    const entered = (token || '').trim().toUpperCase();
+    // Validation stricte : seul le jeton actif en base est valide
+    const isValid = entered.length > 0 && entered === serverToken;
+    res.json({ success: true, valid: isValid });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+app.post('/api/verify-pin', async (req, res) => {
+  try {
+    const { pin } = req.body;
+    const config = await dbGetConfig();
+    const serverPin = (config.adminPin || '000000').trim();
+    const entered = (pin || '').trim();
+    // Validation stricte : seul le code PIN actif en base est valide
+    const isValid = entered.length === 6 && entered === serverPin;
+    res.json({ success: true, valid: isValid });
   } catch (err: any) {
     res.status(500).json({ success: false, error: err.message });
   }

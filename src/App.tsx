@@ -58,6 +58,7 @@ export default function App() {
     if (typeof window === 'undefined') return false;
     return localStorage.getItem(STORAGE_KEY_TOKEN_VALIDATED) === 'true';
   });
+  const [tokenRevokedMessage, setTokenRevokedMessage] = useState<string>('');
 
   // Dynamic Store Name
   const [storeName, setStoreName] = useState<string>(getStoreName);
@@ -197,6 +198,17 @@ export default function App() {
 
     fetchConfig().then((cfg) => {
       if (cfg) {
+        if (cfg.storeName) {
+          setStoreName(cfg.storeName);
+        }
+        if (cfg.apiToken) {
+          const savedToken = (localStorage.getItem('planning_api_token') || '').trim().toUpperCase();
+          if (savedToken && savedToken !== cfg.apiToken.trim().toUpperCase()) {
+            localStorage.removeItem(STORAGE_KEY_TOKEN_VALIDATED);
+            setIsTokenValidated(false);
+            setTokenRevokedMessage("La clé d'accès a été modifiée par l'administrateur. Veuillez saisir la nouvelle clé.");
+          }
+        }
         if (cfg.employees && cfg.employees.length > 0) {
           const sanitizedEmployees = ensureResponsableAdmin(cfg.employees);
           setEmployees(sanitizedEmployees);
@@ -252,6 +264,7 @@ export default function App() {
   // Handle successful token validation
   const handleTokenSuccess = (token: string) => {
     localStorage.setItem(STORAGE_KEY_TOKEN_VALIDATED, 'true');
+    setTokenRevokedMessage('');
     setIsTokenValidated(true);
 
     const savedEmpName = localStorage.getItem(STORAGE_KEY_EMPLOYEE);
@@ -405,12 +418,31 @@ export default function App() {
             setMySchedule(msg.teamSchedules[currentEmployee.name]);
           }
         }
+      } else if (msg.type === 'TOKEN_CHANGED') {
+        const savedToken = (localStorage.getItem('planning_api_token') || '').trim().toUpperCase();
+        const newToken = (msg.newToken || '').trim().toUpperCase();
+        if (savedToken !== newToken) {
+          localStorage.removeItem(STORAGE_KEY_TOKEN_VALIDATED);
+          setIsTokenValidated(false);
+          setTokenRevokedMessage("La clé d'accès a été modifiée par l'administrateur. Veuillez saisir la nouvelle clé.");
+        }
+      } else if (msg.type === 'PIN_CHANGED') {
+        setIsAdminActive(false);
       } else if (msg.type === 'CONFIG_UPDATED') {
         if (msg.config) {
           if (msg.config.employees) setEmployees(ensureResponsableAdmin(msg.config.employees));
           if (msg.config.visibleMonths) setVisibleMonths(msg.config.visibleMonths);
           if (msg.config.allMonths) setAllMonths(msg.config.allMonths);
           if (msg.config.storeName) setStoreName(msg.config.storeName);
+          if (msg.config.apiToken) {
+            const savedToken = (localStorage.getItem('planning_api_token') || '').trim().toUpperCase();
+            const serverToken = msg.config.apiToken.trim().toUpperCase();
+            if (savedToken && savedToken !== serverToken) {
+              localStorage.removeItem(STORAGE_KEY_TOKEN_VALIDATED);
+              setIsTokenValidated(false);
+              setTokenRevokedMessage("La clé d'accès a été modifiée par l'administrateur. Veuillez saisir la nouvelle clé.");
+            }
+          }
         }
       } else if (msg.type === 'NOTES_UPDATED') {
         if (msg.monthKey === selectedMonth) {
@@ -590,7 +622,13 @@ export default function App() {
 
   // 1. Mandatory Token Gate Screen
   if (!isTokenValidated) {
-    return <TokenGate onTokenSuccess={handleTokenSuccess} />;
+    return (
+      <TokenGate
+        storeName={storeName}
+        infoMessage={tokenRevokedMessage}
+        onTokenSuccess={handleTokenSuccess}
+      />
+    );
   }
 
   // 2. Main App Screen once token is validated

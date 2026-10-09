@@ -56,6 +56,8 @@ export interface MonthItem {
 
 export interface ConfigData {
   storeName?: string;
+  apiToken?: string;
+  adminPin?: string;
   employees: Employee[];
   visibleMonths: string[];
   allMonths: MonthItem[];

@@ -7,10 +7,14 @@ import {
   DEFAULT_ALL_MONTHS,
   DEFAULT_TABLEAU2_SHIFTS,
   DEFAULT_CATEGORIES,
+  DEFAULT_API_TOKEN,
+  DEFAULT_ADMIN_PIN,
 } from '../config/constants.ts';
 
 export interface ServerConfig {
   storeName: string;
+  apiToken: string;
+  adminPin: string;
   employees: any[];
   visibleMonths: string[];
   allMonths: any[];
@@ -65,6 +69,8 @@ const DB_JSON_PATH = path.join(DATA_DIR, 'planning_db.json');
 let memoryDb: DatabaseState = {
   config: {
     storeName: DEFAULT_STORE_NAME,
+    apiToken: DEFAULT_API_TOKEN,
+    adminPin: DEFAULT_ADMIN_PIN,
     employees: DEFAULT_EMPLOYEES,
     visibleMonths: DEFAULT_VISIBLE_MONTHS,
     allMonths: DEFAULT_ALL_MONTHS,
@@ -89,7 +95,12 @@ async function loadLocalDbFile(): Promise<void> {
       const parsed = JSON.parse(content);
       if (parsed) {
         memoryDb = {
-          config: parsed.config || memoryDb.config,
+          config: {
+            ...memoryDb.config,
+            ...(parsed.config || {}),
+            apiToken: (parsed.config && parsed.config.apiToken) || memoryDb.config.apiToken || DEFAULT_API_TOKEN,
+            adminPin: (parsed.config && parsed.config.adminPin) || memoryDb.config.adminPin || DEFAULT_ADMIN_PIN,
+          },
           schedules: parsed.schedules || {},
           dayNotes: parsed.dayNotes || {},
           changes: parsed.changes || {},
@@ -169,10 +180,114 @@ export async function dbGetMonthSchedules(monthKey: string): Promise<Record<stri
   return memoryDb.schedules[monthKey] || {};
 }
 
+/**
+ * Calculates accurate decimal hours from a shift type and hours string,
+ * cross-referencing defined Tableau 2 shifts, time ranges, and hour formats.
+ */
+export function calculateShiftDurationHours(
+  shiftText: string,
+  hoursText?: string,
+  tableau2Options: any[] = []
+): number {
+  if (!shiftText && !hoursText) return 0;
+
+  const s = (shiftText || '').trim().toUpperCase();
+  const h = (hoursText || '').trim();
+
+  // Absences and rests = 0h
+  if (
+    s.includes('REPOS') ||
+    s.includes('CONGES') ||
+    s.includes('CONGÉS') ||
+    s.includes('RTT') ||
+    s.includes('MALADIE') ||
+    s === 'AT' ||
+    s === 'ABSENT'
+  ) {
+    return 0;
+  }
+
+  // 1. Cross-reference against Tableau 2 options
+  if (Array.isArray(tableau2Options) && tableau2Options.length > 0) {
+    for (const opt of tableau2Options) {
+      if (
+        opt.shift &&
+        opt.shift.toUpperCase() === s &&
+        opt.hours &&
+        h &&
+        opt.hours.replace(/\s+/g, '') === h.replace(/\s+/g, '')
+      ) {
+        if (opt.hoursDecimal !== undefined && opt.hoursDecimal >= 0) {
+          return opt.hoursDecimal;
+        }
+      }
+    }
+  }
+
+  // 2. Direct single numeric value like "7", "7h", "7.5", "8h"
+  const singleNumMatch = h.match(/^(\d+(?:[.,]\d+)?)\s*h?$/i);
+  if (singleNumMatch) {
+    const val = parseFloat(singleNumMatch[1].replace(',', '.'));
+    if (!isNaN(val) && val > 0 && val <= 16) return val;
+  }
+
+  // 3. Direct format like "7h30" or "8h15"
+  const singleHoursMinsMatch = h.match(/^(\d{1,2})\s*h\s*(\d{2})$/i);
+  if (singleHoursMinsMatch) {
+    const hours = parseInt(singleHoursMinsMatch[1], 10);
+    const mins = parseInt(singleHoursMinsMatch[2], 10);
+    return Math.round((hours + mins / 60) * 100) / 100;
+  }
+
+  // 4. Time ranges like "08:30-12:30 , 14:00-18:00" or "9h-12h30 14h-19h"
+  const rangeRegex = /(\d{1,2})(?:[h:](\d{2}))?\s*(?:[-/–—]|à)\s*(\d{1,2})(?:[h:](\d{2}))?/gi;
+  let totalRangeHours = 0;
+  let matchesFound = 0;
+  let match: RegExpExecArray | null;
+
+  while ((match = rangeRegex.exec(h)) !== null) {
+    matchesFound++;
+    const startH = parseInt(match[1], 10);
+    const startM = match[2] ? parseInt(match[2], 10) : 0;
+    const endH = parseInt(match[3], 10);
+    const endM = match[4] ? parseInt(match[4], 10) : 0;
+
+    const startDec = startH + startM / 60;
+    let endDec = endH + endM / 60;
+    if (endDec < startDec) endDec += 24;
+    const diff = endDec - startDec;
+    if (diff > 0 && diff <= 16) {
+      totalRangeHours += diff;
+    }
+  }
+
+  if (matchesFound > 0 && totalRangeHours > 0) {
+    return Math.round(totalRangeHours * 100) / 100;
+  }
+
+  // 5. Fallback defaults by shift code
+  if (s.includes('MATIN') || s.includes('SOIR')) return 7;
+  if (s.includes('JOURNEE') || s.includes('JOURNÉE')) return 7.5;
+  if (s.includes('FORMATION')) return 7;
+
+  return 0;
+}
+
 export async function dbSaveMonthSchedules(
   monthKey: string,
   teamSchedules: Record<string, EmployeeScheduleData>
 ): Promise<void> {
+  for (const sched of Object.values(teamSchedules)) {
+    if (!sched.totalHours || sched.totalHours === 0) {
+      let tot = 0;
+      if (sched.days) {
+        for (const day of Object.values(sched.days)) {
+          tot += calculateShiftDurationHours(day.shift, day.hours, memoryDb.config.tableau2Shifts);
+        }
+      }
+      sched.totalHours = Math.round(tot * 100) / 100;
+    }
+  }
   memoryDb.schedules[monthKey] = teamSchedules;
   await saveLocalDbFile();
 }
@@ -212,8 +327,7 @@ export async function dbUpdateShift(
 
   let total = 0;
   for (const dayData of Object.values(empSched.days)) {
-    const parsed = parseFloat((dayData.hours || '').replace('h', '.').replace(':', '.'));
-    if (!isNaN(parsed)) total += parsed;
+    total += calculateShiftDurationHours(dayData.shift, dayData.hours, memoryDb.config.tableau2Shifts);
   }
   empSched.totalHours = Math.round(total * 100) / 100;
 
@@ -318,6 +432,8 @@ export async function dbResetToCleanStore(): Promise<ServerConfig> {
   memoryDb = {
     config: {
       storeName: DEFAULT_STORE_NAME,
+      apiToken: DEFAULT_API_TOKEN,
+      adminPin: DEFAULT_ADMIN_PIN,
       employees: DEFAULT_EMPLOYEES,
       visibleMonths: DEFAULT_VISIBLE_MONTHS,
       allMonths: DEFAULT_ALL_MONTHS,

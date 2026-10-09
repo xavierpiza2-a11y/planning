@@ -10,6 +10,11 @@ import {
 import {
   getApiToken,
   setApiToken,
+  saveApiToken,
+  getStoredAdminPin,
+  setStoredAdminPin,
+  saveAdminPin,
+  verifyAdminPin,
   saveEmployees,
   saveVisibleMonths,
   saveAllMonths,
@@ -70,22 +75,7 @@ import {
   Info,
 } from 'lucide-react';
 
-const STORAGE_KEY_ADMIN_PIN = 'planning_admin_pin';
-
-export function getStoredAdminPin(): string {
-  if (typeof window === 'undefined') return DEFAULT_ADMIN_PIN;
-  const stored = localStorage.getItem(STORAGE_KEY_ADMIN_PIN);
-  if (!stored || stored.trim().length !== 6 || !/^\d{6}$/.test(stored.trim())) {
-    return DEFAULT_ADMIN_PIN;
-  }
-  return stored.trim();
-}
-
-export function setStoredAdminPin(newPin: string) {
-  if (typeof window !== 'undefined') {
-    localStorage.setItem(STORAGE_KEY_ADMIN_PIN, newPin.trim());
-  }
-}
+export { getStoredAdminPin, setStoredAdminPin };
 
 // Helpers for Month formatting & calendar metadata
 export const getFrenchMonthLabel = (key: string): string => {
@@ -353,29 +343,30 @@ export const AdminView: React.FC<AdminViewProps> = ({
 
     // Auto-verify when 6 digits are typed against active stored admin pin
     if (nextPin.length === 6) {
-      const activeAdminPin = getStoredAdminPin();
-      if (nextPin === activeAdminPin) {
-        setTimeout(() => {
-          setAuth(true);
-          setPinInput('');
-          setPinError('');
-        }, 150);
-      } else {
-        setTimeout(() => {
-          setPinError('Code PIN incorrect (6 chiffres)');
-          setPinInput('');
-        }, 250);
-      }
+      verifyAdminPin(nextPin).then((isValid) => {
+        if (isValid) {
+          setTimeout(() => {
+            setAuth(true);
+            setPinInput('');
+            setPinError('');
+          }, 150);
+        } else {
+          setTimeout(() => {
+            setPinError('Code PIN incorrect (6 chiffres)');
+            setPinInput('');
+          }, 250);
+        }
+      });
     }
   };
 
   // Submit PIN explicitly: ONLY active stored admin pin
-  const handleValidatePin = (e?: React.FormEvent) => {
+  const handleValidatePin = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     const pin = pinInput.trim();
-    const activeAdminPin = getStoredAdminPin();
+    const isValid = await verifyAdminPin(pin);
 
-    if (pin === activeAdminPin) {
+    if (isValid) {
       setAuth(true);
       setPinInput('');
       setPinError('');
@@ -386,7 +377,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
   };
 
   // Change Admin PIN: strictly 6 digits
-  const handleChangeAdminPin = (e: React.FormEvent) => {
+  const handleChangeAdminPin = async (e: React.FormEvent) => {
     e.preventDefault();
     setAdminPinError('');
     setAdminPinSuccess(false);
@@ -402,18 +393,21 @@ export const AdminView: React.FC<AdminViewProps> = ({
       return;
     }
 
-    setStoredAdminPin(pin);
+    await saveAdminPin(pin);
     setAdminPinSuccess(true);
     setNewAdminPin('');
     setConfirmAdminPin('');
+    showToast('success', 'Nouveau code PIN enregistré sur la base de données !');
     setTimeout(() => setAdminPinSuccess(false), 3000);
   };
 
   // Save Security Token
-  const handleSaveConnection = (e: React.FormEvent) => {
+  const handleSaveConnection = async (e: React.FormEvent) => {
     e.preventDefault();
-    setApiToken(tokenInput.trim());
+    const cleanToken = tokenInput.trim();
+    await saveApiToken(cleanToken);
     setConnectionSuccess(true);
+    showToast('success', 'Jeton d’accès enregistré sur la base de données !');
     setTimeout(() => setConnectionSuccess(false), 3000);
   };
 

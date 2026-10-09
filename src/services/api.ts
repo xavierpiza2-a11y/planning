@@ -11,6 +11,7 @@ import {
 } from '../types/planning';
 import {
   DEFAULT_API_TOKEN,
+  DEFAULT_ADMIN_PIN,
   DEFAULT_STORE_NAME,
   DEFAULT_EMPLOYEES,
   DEFAULT_VISIBLE_MONTHS,
@@ -68,6 +69,12 @@ if (typeof window !== 'undefined') {
           localStorage.setItem(KEY_CACHED_CONFIG, JSON.stringify(msg.config));
           if (msg.config.storeName) {
             localStorage.setItem(KEY_STORE_NAME, msg.config.storeName);
+          }
+          if (msg.config.apiToken) {
+            localStorage.setItem(KEY_API_TOKEN, msg.config.apiToken);
+          }
+          if (msg.config.adminPin) {
+            localStorage.setItem(STORAGE_KEY_ADMIN_PIN, msg.config.adminPin);
           }
           if (msg.config.tableau2Shifts) {
             localStorage.setItem(KEY_CACHED_TABLEAU2, JSON.stringify(msg.config.tableau2Shifts));
@@ -210,6 +217,8 @@ export function getCachedTeamPlanning(
   }
 }
 
+export const STORAGE_KEY_ADMIN_PIN = 'planning_admin_pin';
+
 export function getApiToken(): string {
   if (typeof window === 'undefined') return DEFAULT_API_TOKEN;
   return localStorage.getItem(KEY_API_TOKEN) || DEFAULT_API_TOKEN;
@@ -219,6 +228,97 @@ export function setApiToken(token: string): void {
   if (typeof window !== 'undefined') {
     localStorage.setItem(KEY_API_TOKEN, token.trim());
   }
+}
+
+export async function saveApiToken(newToken: string): Promise<boolean> {
+  const token = (newToken || '').trim();
+  if (typeof window !== 'undefined') {
+    localStorage.setItem(KEY_API_TOKEN, token);
+  }
+  try {
+    const res = await fetch('/api/config', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ apiToken: token }),
+    });
+    return res.ok;
+  } catch (err) {
+    console.error('Error saving API token to database:', err);
+    return false;
+  }
+}
+
+export async function verifyApiToken(token: string): Promise<boolean> {
+  const entered = (token || '').trim().toUpperCase();
+  if (!entered) return false;
+  try {
+    const res = await fetch('/api/verify-token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token: entered }),
+    });
+    if (res.ok) {
+      const data = await res.json();
+      return Boolean(data.valid);
+    }
+  } catch {
+    // offline fallback
+  }
+  const configured = getApiToken().trim().toUpperCase();
+  return entered === configured;
+}
+
+export function getStoredAdminPin(): string {
+  if (typeof window === 'undefined') return DEFAULT_ADMIN_PIN;
+  const stored = localStorage.getItem(STORAGE_KEY_ADMIN_PIN);
+  if (!stored || stored.trim().length !== 6 || !/^\d{6}$/.test(stored.trim())) {
+    return DEFAULT_ADMIN_PIN;
+  }
+  return stored.trim();
+}
+
+export function setStoredAdminPin(newPin: string): void {
+  if (typeof window !== 'undefined') {
+    localStorage.setItem(STORAGE_KEY_ADMIN_PIN, newPin.trim());
+  }
+}
+
+export async function saveAdminPin(newPin: string): Promise<boolean> {
+  const pin = (newPin || '').trim();
+  if (typeof window !== 'undefined') {
+    localStorage.setItem(STORAGE_KEY_ADMIN_PIN, pin);
+  }
+  try {
+    const res = await fetch('/api/config', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ adminPin: pin }),
+    });
+    return res.ok;
+  } catch (err) {
+    console.error('Error saving admin PIN to database:', err);
+    return false;
+  }
+}
+
+export async function verifyAdminPin(pin: string): Promise<boolean> {
+  const entered = (pin || '').trim();
+  if (entered.length !== 6) return false;
+  try {
+    const res = await fetch('/api/verify-pin', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ pin: entered }),
+    });
+    if (res.ok) {
+      const data = await res.json();
+      return Boolean(data.valid);
+    }
+  } catch {
+    // offline fallback
+  }
+  const configured = getStoredAdminPin().trim();
+  return entered === configured;
 }
 
 export function getStoreName(): string {
@@ -266,6 +366,9 @@ export async function fetchConfig(): Promise<ConfigData> {
       const data = await res.json();
       if (data.success && data.config) {
         const config: ConfigData = {
+          storeName: data.config.storeName || DEFAULT_STORE_NAME,
+          apiToken: data.config.apiToken || DEFAULT_API_TOKEN,
+          adminPin: data.config.adminPin || DEFAULT_ADMIN_PIN,
           employees: ensureResponsableAdmin(data.config.employees || DEFAULT_EMPLOYEES),
           visibleMonths: data.config.visibleMonths || DEFAULT_VISIBLE_MONTHS,
           allMonths: data.config.allMonths || DEFAULT_ALL_MONTHS,
@@ -275,6 +378,12 @@ export async function fetchConfig(): Promise<ConfigData> {
           localStorage.setItem(KEY_CACHED_CONFIG, JSON.stringify(config));
           if (data.config.storeName) {
             localStorage.setItem(KEY_STORE_NAME, data.config.storeName);
+          }
+          if (data.config.apiToken) {
+            localStorage.setItem(KEY_API_TOKEN, data.config.apiToken);
+          }
+          if (data.config.adminPin) {
+            localStorage.setItem(STORAGE_KEY_ADMIN_PIN, data.config.adminPin);
           }
           if (data.config.tableau2Shifts) {
             localStorage.setItem(KEY_CACHED_TABLEAU2, JSON.stringify(data.config.tableau2Shifts));
@@ -300,6 +409,9 @@ export async function fetchConfig(): Promise<ConfigData> {
   }
 
   return {
+    storeName: getStoreName(),
+    apiToken: getApiToken(),
+    adminPin: getStoredAdminPin(),
     employees: ensureResponsableAdmin(DEFAULT_EMPLOYEES),
     visibleMonths: DEFAULT_VISIBLE_MONTHS,
     allMonths: DEFAULT_ALL_MONTHS,

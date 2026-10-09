@@ -1,19 +1,20 @@
 import React, { useState } from 'react';
-import { getApiToken, setApiToken } from '../services/api';
+import { verifyApiToken, setApiToken } from '../services/api';
 import { KeyRound, ShieldCheck, ArrowRight, AlertCircle, Eye, EyeOff } from 'lucide-react';
 
 interface TokenGateProps {
   storeName?: string;
+  infoMessage?: string;
   onTokenSuccess: (token: string) => void;
 }
 
-export const TokenGate: React.FC<TokenGateProps> = ({ storeName, onTokenSuccess }) => {
+export const TokenGate: React.FC<TokenGateProps> = ({ storeName, infoMessage, onTokenSuccess }) => {
   const [tokenInput, setTokenInput] = useState('');
   const [showToken, setShowToken] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const [isValidating, setIsValidating] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const entered = tokenInput.trim().toUpperCase();
 
@@ -25,19 +26,11 @@ export const TokenGate: React.FC<TokenGateProps> = ({ storeName, onTokenSuccess 
     setIsValidating(true);
     setErrorMessage('');
 
-    // Jeton d'accès configuré dans l'application
-    const configuredToken = getApiToken().trim().toUpperCase();
-
-    // Validation souple & sécurisée : accepte la clé configurée ou la clé neutre par défaut PLANNING
-    const isValid =
-      entered === configuredToken ||
-      entered === 'PLANNING' ||
-      entered === 'PLANNING-2026';
+    // Validation via base de données du serveur
+    const isValid = await verifyApiToken(entered);
 
     if (isValid) {
-      if (entered === 'PLANNING' && configuredToken !== 'PLANNING') {
-        setApiToken('PLANNING');
-      }
+      setApiToken(entered);
       setTimeout(() => {
         setIsValidating(false);
         onTokenSuccess(entered);
@@ -94,6 +87,13 @@ export const TokenGate: React.FC<TokenGateProps> = ({ storeName, onTokenSuccess 
               Pour accéder aux plannings, saisissez votre clé d'accès (Clé initiale : <span className="font-mono font-bold text-emerald-800 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200">PLANNING</span>).
             </p>
           </div>
+
+          {infoMessage && (
+            <div className="p-3 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 text-xs flex items-start gap-2 shadow-xs">
+              <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+              <p className="font-medium leading-relaxed">{infoMessage}</p>
+            </div>
+          )}
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-1.5">
