@@ -196,7 +196,20 @@ export const DEFAULT_TABLEAU2_SHIFTS: Tableau2ShiftOption[] = [
 export const DEFAULT_STORE_NAME = 'Planning Équipe';
 
 export const DEFAULT_EMPLOYEES: Employee[] = [
-  { name: 'Responsable', color: '#1a6b2a', role: 'Responsable', isAdmin: true },
+  {
+    name: 'Responsable',
+    color: '#1a6b2a',
+    role: 'Responsable',
+    isAdmin: true,
+    contractType: 'HEBDO_35H',
+    weeklyHoursQuota: 35,
+    yearlyHoursQuota: 1607,
+    initialHoursBalance: 0,
+    paidLeaveTotal: 25,
+    paidLeaveTaken: 0,
+    rttTotal: 0,
+    rttTaken: 0,
+  },
 ];
 
 export const DEFAULT_ALL_MONTHS: MonthItem[] = [
