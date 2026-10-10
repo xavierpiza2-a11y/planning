@@ -1,9 +1,20 @@
+export type ContractType = 'HEBDO_35H' | 'ANNUALISE' | 'FORFAIT_JOUR';
+
 export interface Employee {
   name: string;
   color: string;
   pin?: string;
   role?: string;
   isAdmin?: boolean;
+  contractType?: ContractType; // 'HEBDO_35H' | 'ANNUALISE' | 'FORFAIT_JOUR'
+  weeklyHoursQuota?: number; // Quota hebdomadaire pour les 35h (défaut: 35)
+  yearlyHoursQuota?: number; // Quota annuel pour les annualisés (défaut: 1607)
+  forfaitDaysQuota?: number; // Quota annuel de jours pour forfait jour (défaut: 218)
+  initialHoursBalance?: number; // Report d'heures N-1 au 1er juin (ex: +4h ou -2h, défaut: 0)
+  paidLeaveTotal?: number; // Total de congés payés acquis sur l'exercice (défaut: 25)
+  paidLeaveTaken?: number; // Congés payés déjà pris initialement au 1er juin (défaut: 0)
+  rttTotal?: number; // Total RTT acquis (défaut: 0 ou 10)
+  rttTaken?: number; // RTT déjà pris initialement (défaut: 0)
 }
 
 export interface ShiftCategoryItem {
