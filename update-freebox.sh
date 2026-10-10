@@ -12,19 +12,29 @@ echo "=========================================================="
 
 APP_DIR=$(pwd)
 
-# 1. Sauvegarde préventive de sécurité du fichier de base de données
+# 1. Sauvegarde préventive de sécurité de la base de données actuelle
 if [ -f "$APP_DIR/data/planning_db.json" ]; then
   TIMESTAMP=$(date +%Y%m%d_%H%M%S)
   BACKUP_FILE="$APP_DIR/data/planning_db_backup_${TIMESTAMP}.json"
   cp "$APP_DIR/data/planning_db.json" "$BACKUP_FILE"
+  cp "$APP_DIR/data/planning_db.json" /tmp/planning_db_restore_temp.json
   echo "🛡️ Sauvegarde de sécurité créée : $BACKUP_FILE"
 fi
 
-# 2. Récupération des dernières modifications du code depuis GitHub
+# 2. Débloquer Git en cas de conflit sur le fichier de base de données
+git checkout -- data/planning_db.json 2>/dev/null || git stash 2>/dev/null || true
+
+# 3. Récupération des dernières modifications du code depuis GitHub
 echo "📥 Téléchargement des nouveaux fichiers depuis GitHub..."
 git pull origin main || git pull
 
-# 3. Reconstruction et relance du conteneur avec la nouvelle version
+# 4. Restauration de vos vraies données locales
+if [ -f /tmp/planning_db_restore_temp.json ]; then
+  cp /tmp/planning_db_restore_temp.json "$APP_DIR/data/planning_db.json"
+  rm -f /tmp/planning_db_restore_temp.json
+fi
+
+# 5. Reconstruction et relance du conteneur avec la nouvelle version
 echo "🐳 Reconstruction du conteneur Docker avec les nouveaux fichiers..."
 docker compose up -d --build
 
