@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Employee, MonthItem, Tableau2ShiftOption, EmployeeMonthSchedule } from '../types/planning';
+import { Employee, MonthItem, Tableau2ShiftOption, EmployeeMonthSchedule, ContractType } from '../types/planning';
 import {
   DEFAULT_ADMIN_PIN,
   DEFAULT_API_TOKEN,
@@ -254,6 +254,15 @@ export const AdminView: React.FC<AdminViewProps> = ({
   const [newEmpRole, setNewEmpRole] = useState('');
   const [newEmpIsAdmin, setNewEmpIsAdmin] = useState(false);
   const [newEmpColor, setNewEmpColor] = useState('#166534');
+  const [newEmpContractType, setNewEmpContractType] = useState<ContractType>('HEBDO_35H');
+  const [newEmpWeeklyQuota, setNewEmpWeeklyQuota] = useState<number>(35);
+  const [newEmpYearlyQuota, setNewEmpYearlyQuota] = useState<number>(1607);
+  const [newEmpForfaitDaysQuota, setNewEmpForfaitDaysQuota] = useState<number>(218);
+  const [newEmpInitialHoursBalance, setNewEmpInitialHoursBalance] = useState<number>(0);
+  const [newEmpPaidLeaveTotal, setNewEmpPaidLeaveTotal] = useState<number>(25);
+  const [newEmpPaidLeaveTaken, setNewEmpPaidLeaveTaken] = useState<number>(0);
+  const [newEmpRttTotal, setNewEmpRttTotal] = useState<number>(0);
+  const [newEmpRttTaken, setNewEmpRttTaken] = useState<number>(0);
   const [employeeToDelete, setEmployeeToDelete] = useState<Employee | null>(null);
 
   // Employee modification state
@@ -262,6 +271,15 @@ export const AdminView: React.FC<AdminViewProps> = ({
   const [editEmpRole, setEditEmpRole] = useState('');
   const [editEmpIsAdmin, setEditEmpIsAdmin] = useState(false);
   const [editEmpColor, setEditEmpColor] = useState('#166534');
+  const [editEmpContractType, setEditEmpContractType] = useState<ContractType>('HEBDO_35H');
+  const [editEmpWeeklyQuota, setEditEmpWeeklyQuota] = useState<number>(35);
+  const [editEmpYearlyQuota, setEditEmpYearlyQuota] = useState<number>(1607);
+  const [editEmpForfaitDaysQuota, setEditEmpForfaitDaysQuota] = useState<number>(218);
+  const [editEmpInitialHoursBalance, setEditEmpInitialHoursBalance] = useState<number>(0);
+  const [editEmpPaidLeaveTotal, setEditEmpPaidLeaveTotal] = useState<number>(25);
+  const [editEmpPaidLeaveTaken, setEditEmpPaidLeaveTaken] = useState<number>(0);
+  const [editEmpRttTotal, setEditEmpRttTotal] = useState<number>(0);
+  const [editEmpRttTaken, setEditEmpRttTaken] = useState<number>(0);
 
   // Months management state
   const [monthsList, setMonthsList] = useState<MonthItem[]>(allMonths);
@@ -458,6 +476,15 @@ export const AdminView: React.FC<AdminViewProps> = ({
       color: newEmpColor,
       role: newEmpRole.trim() || (isResp ? 'Responsable' : 'Collaborateur'),
       isAdmin: isResp ? true : newEmpIsAdmin,
+      contractType: newEmpContractType,
+      weeklyHoursQuota: newEmpWeeklyQuota,
+      yearlyHoursQuota: newEmpYearlyQuota,
+      forfaitDaysQuota: newEmpForfaitDaysQuota,
+      initialHoursBalance: newEmpInitialHoursBalance,
+      paidLeaveTotal: newEmpPaidLeaveTotal,
+      paidLeaveTaken: newEmpPaidLeaveTaken,
+      rttTotal: newEmpRttTotal,
+      rttTaken: newEmpRttTaken,
     };
 
     const updated = ensureResponsableAdmin([...teamList, newEmp]);
@@ -465,6 +492,15 @@ export const AdminView: React.FC<AdminViewProps> = ({
     setNewEmpName('');
     setNewEmpRole('');
     setNewEmpIsAdmin(false);
+    setNewEmpContractType('HEBDO_35H');
+    setNewEmpWeeklyQuota(35);
+    setNewEmpYearlyQuota(1607);
+    setNewEmpForfaitDaysQuota(218);
+    setNewEmpInitialHoursBalance(0);
+    setNewEmpPaidLeaveTotal(25);
+    setNewEmpPaidLeaveTaken(0);
+    setNewEmpRttTotal(0);
+    setNewEmpRttTaken(0);
 
     // Auto-save and sync immediately with application state
     await saveEmployees(updated);
@@ -482,6 +518,15 @@ export const AdminView: React.FC<AdminViewProps> = ({
     );
     setEditEmpIsAdmin(isResp ? true : Boolean(emp.isAdmin));
     setEditEmpColor(emp.color || '#166534');
+    setEditEmpContractType(emp.contractType || 'HEBDO_35H');
+    setEditEmpWeeklyQuota(emp.weeklyHoursQuota ?? 35);
+    setEditEmpYearlyQuota(emp.yearlyHoursQuota ?? 1607);
+    setEditEmpForfaitDaysQuota(emp.forfaitDaysQuota ?? 218);
+    setEditEmpInitialHoursBalance(emp.initialHoursBalance ?? 0);
+    setEditEmpPaidLeaveTotal(emp.paidLeaveTotal ?? 25);
+    setEditEmpPaidLeaveTaken(emp.paidLeaveTaken ?? 0);
+    setEditEmpRttTotal(emp.rttTotal ?? (emp.contractType === 'FORFAIT_JOUR' ? 10 : 0));
+    setEditEmpRttTaken(emp.rttTaken ?? 0);
   };
 
   const handleSaveEditEmployee = async (e: React.FormEvent) => {
@@ -526,6 +571,15 @@ export const AdminView: React.FC<AdminViewProps> = ({
           role: finalRole,
           isAdmin: finalIsAdmin,
           color: editEmpColor,
+          contractType: editEmpContractType,
+          weeklyHoursQuota: editEmpWeeklyQuota,
+          yearlyHoursQuota: editEmpYearlyQuota,
+          forfaitDaysQuota: editEmpForfaitDaysQuota,
+          initialHoursBalance: editEmpInitialHoursBalance,
+          paidLeaveTotal: editEmpPaidLeaveTotal,
+          paidLeaveTaken: editEmpPaidLeaveTaken,
+          rttTotal: editEmpRttTotal,
+          rttTaken: editEmpRttTaken,
         };
       }
       return emp;
@@ -1292,6 +1346,28 @@ export const AdminView: React.FC<AdminViewProps> = ({
                             {emp.role}
                           </span>
                         )}
+                        {/* Contract Pill */}
+                        <span className="text-[10px] bg-sky-50 text-sky-800 px-2 py-0.5 rounded-full font-bold border border-sky-200">
+                          {emp.contractType === 'ANNUALISE'
+                            ? `Annualisé (${emp.yearlyHoursQuota || 1607}h)`
+                            : emp.contractType === 'FORFAIT_JOUR'
+                            ? `Forfait Jour (${emp.forfaitDaysQuota || 218}j)`
+                            : `${emp.weeklyHoursQuota || 35}h / sem`}
+                        </span>
+                        {/* Leave remaining */}
+                        <span className="text-[10px] bg-amber-50 text-amber-800 px-2 py-0.5 rounded-full font-semibold border border-amber-200">
+                          CP : {(emp.paidLeaveTotal ?? 25) - (emp.paidLeaveTaken ?? 0)}j
+                        </span>
+                        {(emp.rttTotal ?? 0) > 0 && (
+                          <span className="text-[10px] bg-teal-50 text-teal-800 px-2 py-0.5 rounded-full font-semibold border border-teal-200">
+                            RTT : {(emp.rttTotal ?? 0) - (emp.rttTaken ?? 0)}j
+                          </span>
+                        )}
+                        {emp.initialHoursBalance !== undefined && emp.initialHoursBalance !== 0 && (
+                          <span className="text-[10px] bg-purple-50 text-purple-800 px-2 py-0.5 rounded-full font-mono font-bold border border-purple-200">
+                            Report : {emp.initialHoursBalance > 0 ? `+${emp.initialHoursBalance}h` : `${emp.initialHoursBalance}h`}
+                          </span>
+                        )}
                         {emp.isAdmin && (
                           <span className="text-[10px] bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full font-bold border border-emerald-200 flex items-center gap-1">
                             <ShieldCheck className="w-3 h-3 text-emerald-600" />
@@ -1441,6 +1517,160 @@ export const AdminView: React.FC<AdminViewProps> = ({
               </div>
             </div>
 
+            {/* Contrat, Quotas & Compteurs RH */}
+            <div className="pt-2 border-t border-slate-100 space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-slate-800">
+                  Régime de travail & Compteurs (Exercice 1er Juin – 31 Mai)
+                </span>
+                <span className="text-[10px] text-slate-500 font-medium">
+                  Gestion précise des heures et des soldes
+                </span>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                {/* Type de contrat */}
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                    Régime de travail
+                  </label>
+                  <select
+                    value={newEmpContractType}
+                    onChange={(e) => {
+                      const ct = e.target.value as ContractType;
+                      setNewEmpContractType(ct);
+                      if (ct === 'FORFAIT_JOUR' && newEmpRttTotal === 0) {
+                        setNewEmpRttTotal(10);
+                      }
+                    }}
+                    className="w-full text-xs font-semibold px-3 py-2 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-600 bg-white"
+                  >
+                    <option value="HEBDO_35H">35h / semaine (Temps plein / partiel)</option>
+                    <option value="ANNUALISE">Annualisé (Modulation annuelle)</option>
+                    <option value="FORFAIT_JOUR">Forfait Jour</option>
+                  </select>
+                </div>
+
+                {/* Quota d'heures ou de jours */}
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                    {newEmpContractType === 'ANNUALISE'
+                      ? 'Quota annuel (heures)'
+                      : newEmpContractType === 'FORFAIT_JOUR'
+                      ? 'Quota annuel (jours)'
+                      : 'Quota hebdo (heures)'}
+                  </label>
+                  {newEmpContractType === 'ANNUALISE' ? (
+                    <input
+                      type="number"
+                      step="1"
+                      value={newEmpYearlyQuota}
+                      onChange={(e) => setNewEmpYearlyQuota(parseFloat(e.target.value) || 1607)}
+                      placeholder="1607"
+                      className="w-full text-xs font-semibold px-3 py-2 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-600 bg-white"
+                    />
+                  ) : newEmpContractType === 'FORFAIT_JOUR' ? (
+                    <input
+                      type="number"
+                      step="1"
+                      min="1"
+                      value={newEmpForfaitDaysQuota}
+                      onChange={(e) => setNewEmpForfaitDaysQuota(parseInt(e.target.value, 10) || 218)}
+                      placeholder="218"
+                      className="w-full text-xs font-semibold px-3 py-2 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-600 bg-white"
+                    />
+                  ) : (
+                    <input
+                      type="number"
+                      step="0.5"
+                      value={newEmpWeeklyQuota}
+                      onChange={(e) => setNewEmpWeeklyQuota(parseFloat(e.target.value) || 35)}
+                      placeholder="35"
+                      className="w-full text-xs font-semibold px-3 py-2 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-600 bg-white"
+                    />
+                  )}
+                </div>
+
+                {/* Report d'heures initial au 1er juin */}
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                    Report d'heures initial (+ / -)
+                  </label>
+                  <input
+                    type="number"
+                    step="0.5"
+                    disabled={newEmpContractType === 'FORFAIT_JOUR'}
+                    value={newEmpInitialHoursBalance}
+                    onChange={(e) => setNewEmpInitialHoursBalance(parseFloat(e.target.value) || 0)}
+                    placeholder="0 (ex: +4 ou -2)"
+                    className="w-full text-xs font-semibold px-3 py-2 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-600 bg-white disabled:bg-slate-100 disabled:text-slate-400"
+                  />
+                  <p className="text-[10px] text-slate-400 mt-0.5">
+                    Solde initial au 1er juin (exercice)
+                  </p>
+                </div>
+              </div>
+
+              {/* Congés Payés & RTT */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 pt-1 bg-slate-50 p-2.5 rounded-xl border border-slate-200/70">
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-700 mb-0.5">
+                    CP Acquis (total)
+                  </label>
+                  <input
+                    type="number"
+                    step="1"
+                    min="0"
+                    value={newEmpPaidLeaveTotal}
+                    onChange={(e) => setNewEmpPaidLeaveTotal(parseInt(e.target.value, 10) || 0)}
+                    className="w-full text-xs font-semibold px-2.5 py-1.5 rounded-lg border border-slate-300 bg-white"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-700 mb-0.5">
+                    CP Déjà pris au 1er juin
+                  </label>
+                  <input
+                    type="number"
+                    step="1"
+                    min="0"
+                    value={newEmpPaidLeaveTaken}
+                    onChange={(e) => setNewEmpPaidLeaveTaken(parseInt(e.target.value, 10) || 0)}
+                    className="w-full text-xs font-semibold px-2.5 py-1.5 rounded-lg border border-slate-300 bg-white"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-700 mb-0.5">
+                    RTT Acquis (total)
+                  </label>
+                  <input
+                    type="number"
+                    step="1"
+                    min="0"
+                    value={newEmpRttTotal}
+                    onChange={(e) => setNewEmpRttTotal(parseInt(e.target.value, 10) || 0)}
+                    className="w-full text-xs font-semibold px-2.5 py-1.5 rounded-lg border border-slate-300 bg-white"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-700 mb-0.5">
+                    RTT Déjà pris au 1er juin
+                  </label>
+                  <input
+                    type="number"
+                    step="1"
+                    min="0"
+                    value={newEmpRttTaken}
+                    onChange={(e) => setNewEmpRttTaken(parseInt(e.target.value, 10) || 0)}
+                    className="w-full text-xs font-semibold px-2.5 py-1.5 rounded-lg border border-slate-300 bg-white"
+                  />
+                </div>
+              </div>
+            </div>
+
             <div className="flex justify-end pt-2 border-t border-slate-100">
               <button
                 type="submit"
@@ -1456,7 +1686,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
           {/* MODAL: MODIFIER UN SALARIÉ */}
           {employeeToEdit && (
             <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-200">
-              <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl max-w-md w-full p-5 space-y-4">
+              <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl max-w-lg w-full p-5 space-y-4 max-h-[92vh] overflow-y-auto">
                 <div className="flex items-center justify-between pb-3 border-b border-slate-100">
                   <div className="flex items-center gap-2.5">
                     <div
@@ -1470,7 +1700,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
                         Modifier le salarié
                       </h4>
                       <p className="text-[11px] text-slate-500">
-                        Informations entièrement personnalisables
+                        Informations de profil, contrat et compteurs
                       </p>
                     </div>
                   </div>
@@ -1483,7 +1713,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
                   </button>
                 </div>
 
-                <form onSubmit={handleSaveEditEmployee} className="space-y-3">
+                <form onSubmit={handleSaveEditEmployee} className="space-y-3.5">
                   <div>
                     <label className="block text-xs font-bold text-slate-700 mb-1">
                       Nom du salarié *
@@ -1557,6 +1787,155 @@ export const AdminView: React.FC<AdminViewProps> = ({
                         </div>
                       );
                     })()}
+                  </div>
+
+                  {/* Section Contrat & Compteurs Exercice Annuel (1er Juin - 31 Mai) */}
+                  <div className="pt-3 border-t border-slate-100 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <h5 className="text-xs font-bold text-slate-900">
+                        Régime de travail & Compteurs (1er Juin – 31 Mai)
+                      </h5>
+                      <span className="text-[10px] font-mono text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
+                        Calcul en temps réel
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                      {/* Contrat */}
+                      <div>
+                        <label className="block text-xs font-bold text-slate-700 mb-1">
+                          Régime de travail
+                        </label>
+                        <select
+                          value={editEmpContractType}
+                          onChange={(e) => {
+                            const ct = e.target.value as ContractType;
+                            setEditEmpContractType(ct);
+                            if (ct === 'FORFAIT_JOUR' && editEmpRttTotal === 0) {
+                              setEditEmpRttTotal(10);
+                            }
+                          }}
+                          className="w-full text-xs font-semibold px-3 py-2 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-600 bg-white"
+                        >
+                          <option value="HEBDO_35H">35h / semaine</option>
+                          <option value="ANNUALISE">Annualisé (Modulation)</option>
+                          <option value="FORFAIT_JOUR">Forfait Jour</option>
+                        </select>
+                      </div>
+
+                      {/* Quota */}
+                      <div>
+                        <label className="block text-xs font-bold text-slate-700 mb-1">
+                          {editEmpContractType === 'ANNUALISE'
+                            ? 'Quota annuel (h)'
+                            : editEmpContractType === 'FORFAIT_JOUR'
+                            ? 'Quota annuel (jours)'
+                            : 'Quota hebdo (h)'}
+                        </label>
+                        {editEmpContractType === 'ANNUALISE' ? (
+                          <input
+                            type="number"
+                            step="1"
+                            value={editEmpYearlyQuota}
+                            onChange={(e) => setEditEmpYearlyQuota(parseFloat(e.target.value) || 1607)}
+                            className="w-full text-xs font-semibold px-3 py-2 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-600 bg-white"
+                          />
+                        ) : editEmpContractType === 'FORFAIT_JOUR' ? (
+                          <input
+                            type="number"
+                            step="1"
+                            min="1"
+                            value={editEmpForfaitDaysQuota}
+                            onChange={(e) => setEditEmpForfaitDaysQuota(parseInt(e.target.value, 10) || 218)}
+                            placeholder="218"
+                            className="w-full text-xs font-semibold px-3 py-2 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-600 bg-white"
+                          />
+                        ) : (
+                          <input
+                            type="number"
+                            step="0.5"
+                            value={editEmpWeeklyQuota}
+                            onChange={(e) => setEditEmpWeeklyQuota(parseFloat(e.target.value) || 35)}
+                            className="w-full text-xs font-semibold px-3 py-2 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-600 bg-white"
+                          />
+                        )}
+                      </div>
+
+                      {/* Report d'heures */}
+                      <div>
+                        <label className="block text-xs font-bold text-slate-700 mb-1">
+                          Report 1er juin (+ / -)
+                        </label>
+                        <input
+                          type="number"
+                          step="0.5"
+                          disabled={editEmpContractType === 'FORFAIT_JOUR'}
+                          value={editEmpInitialHoursBalance}
+                          onChange={(e) => setEditEmpInitialHoursBalance(parseFloat(e.target.value) || 0)}
+                          placeholder="0"
+                          className="w-full text-xs font-semibold px-3 py-2 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-600 bg-white disabled:bg-slate-100 disabled:text-slate-400"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Congés Payés & RTT */}
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 bg-slate-50 p-2.5 rounded-xl border border-slate-200/70">
+                      <div>
+                        <label className="block text-[11px] font-bold text-slate-700 mb-0.5">
+                          CP Acquis (total)
+                        </label>
+                        <input
+                          type="number"
+                          step="1"
+                          min="0"
+                          value={editEmpPaidLeaveTotal}
+                          onChange={(e) => setEditEmpPaidLeaveTotal(parseInt(e.target.value, 10) || 0)}
+                          className="w-full text-xs font-semibold px-2.5 py-1.5 rounded-lg border border-slate-300 bg-white"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-[11px] font-bold text-slate-700 mb-0.5">
+                          CP Déjà pris au 1er juin
+                        </label>
+                        <input
+                          type="number"
+                          step="1"
+                          min="0"
+                          value={editEmpPaidLeaveTaken}
+                          onChange={(e) => setEditEmpPaidLeaveTaken(parseInt(e.target.value, 10) || 0)}
+                          className="w-full text-xs font-semibold px-2.5 py-1.5 rounded-lg border border-slate-300 bg-white"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-[11px] font-bold text-slate-700 mb-0.5">
+                          RTT Acquis (total)
+                        </label>
+                        <input
+                          type="number"
+                          step="1"
+                          min="0"
+                          value={editEmpRttTotal}
+                          onChange={(e) => setEditEmpRttTotal(parseInt(e.target.value, 10) || 0)}
+                          className="w-full text-xs font-semibold px-2.5 py-1.5 rounded-lg border border-slate-300 bg-white"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-[11px] font-bold text-slate-700 mb-0.5">
+                          RTT Déjà pris au 1er juin
+                        </label>
+                        <input
+                          type="number"
+                          step="1"
+                          min="0"
+                          value={editEmpRttTaken}
+                          onChange={(e) => setEditEmpRttTaken(parseInt(e.target.value, 10) || 0)}
+                          className="w-full text-xs font-semibold px-2.5 py-1.5 rounded-lg border border-slate-300 bg-white"
+                        />
+                      </div>
+                    </div>
                   </div>
 
                   <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100">

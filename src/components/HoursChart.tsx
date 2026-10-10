@@ -14,8 +14,9 @@ import {
   PieChart,
   Pie,
 } from 'recharts';
-import { EmployeeMonthSchedule } from '../types/planning';
+import { EmployeeMonthSchedule, Employee } from '../types/planning';
 import { categorizeShift } from '../config/constants';
+import { calculateEmployeeBalances } from '../services/hoursService';
 import {
   Clock,
   TrendingUp,
@@ -270,18 +271,37 @@ export const HoursChart: React.FC<HoursChartProps> = ({
     return calculatedTotalHours;
   }, [schedule, calculatedTotalHours]);
 
-  const totalWorkedDays = useMemo(() => {
-    return daysData.filter((d) => d.hours > 0).length;
-  }, [daysData]);
+  // Resolve employee config & live balances
+  const employeeBalances = useMemo(() => {
+    let empObj: Employee = { name: employeeName || schedule?.employee || 'Collaborateur', color: '#166534' };
+    if (typeof window !== 'undefined') {
+      try {
+        const cachedCfg = localStorage.getItem('planning_cached_config');
+        if (cachedCfg) {
+          const parsed = JSON.parse(cachedCfg);
+          const found = parsed.employees?.find(
+            (e: Employee) => e.name.toLowerCase() === (employeeName || schedule?.employee || '').toLowerCase()
+          );
+          if (found) empObj = found;
+        }
+      } catch {
+        // ignore
+      }
+    }
+    return calculateEmployeeBalances({
+      employee: empObj,
+      selectedMonth,
+      currentSchedule: schedule,
+    });
+  }, [employeeName, schedule, selectedMonth]);
 
-  // Standard monthly hours (35h / week = ~151.67h)
-  const standardMonthlyHours = 151.67;
-  const differenceWithStandard = Math.round((effectiveTotalHours - standardMonthlyHours) * 10) / 10;
+  // Standard monthly hours (35h / week = ~151.67h or quota)
+  const differenceWithStandard = employeeBalances.monthBalance;
 
   // Average weekly hours
   const weeklyAverage = useMemo(() => {
     if (weeklyData.length === 0) return 0;
-    const fullWeeks = weeklyData.filter((w) => w.workedDays > 0);
+    const fullWeeks = weeklyData.filter((w) => w.workedHours > 0);
     if (fullWeeks.length === 0) return 0;
     return Math.round((effectiveTotalHours / fullWeeks.length) * 10) / 10;
   }, [weeklyData, effectiveTotalHours]);
@@ -312,7 +332,7 @@ export const HoursChart: React.FC<HoursChartProps> = ({
                 )}
               </div>
               <p className="text-xs text-slate-500 mt-0.5">
-                {monthLabel || selectedMonth} {employeeName ? `· ${employeeName}` : ''}
+                {monthLabel || selectedMonth} {employeeName ? `· ${employeeName}` : ''} · <span className="font-semibold text-slate-700">{employeeBalances.contractLabel}</span>
               </p>
             </div>
           </div>
@@ -323,8 +343,11 @@ export const HoursChart: React.FC<HoursChartProps> = ({
                 {effectiveTotalHours}
                 <span className="text-sm font-bold text-emerald-600 ml-0.5">h</span>
               </div>
-              <p className="text-[10px] font-medium text-slate-400 mt-0.5">
-                {totalWorkedDays} jours travaillés
+              <p className="text-[10px] font-semibold text-slate-500 mt-0.5">
+                CP restants : <span className="text-amber-700 font-bold">{employeeBalances.paidLeaveRemaining}j</span>
+                {employeeBalances.rttTotal > 0 && (
+                  <span className="ml-1 text-teal-700">· RTT : {employeeBalances.rttRemaining}j</span>
+                )}
               </p>
             </div>
             <button
@@ -352,7 +375,7 @@ export const HoursChart: React.FC<HoursChartProps> = ({
 
             <div className="bg-white/80 rounded-lg p-2 border border-slate-200/60 shadow-2xs">
               <span className="text-[10px] font-medium text-slate-500 uppercase tracking-wider block">
-                Base 35h
+                Écart Mois ({employeeBalances.expectedMonthHours}h)
               </span>
               <span
                 className={`text-xs sm:text-sm font-bold tabular-nums ${
@@ -365,10 +388,22 @@ export const HoursChart: React.FC<HoursChartProps> = ({
 
             <div className="bg-white/80 rounded-lg p-2 border border-slate-200/60 shadow-2xs">
               <span className="text-[10px] font-medium text-slate-500 uppercase tracking-wider block">
-                Moy. / Jour
+                Écart Année (1er Juin - 31 Mai)
               </span>
-              <span className="text-xs sm:text-sm font-bold text-slate-800 tabular-nums">
-                {totalWorkedDays > 0 ? `${Math.round((effectiveTotalHours / totalWorkedDays) * 10) / 10}h` : '—'}
+              <span
+                className={`text-xs sm:text-sm font-bold tabular-nums ${
+                  employeeBalances.exerciseBalance > 0
+                    ? 'text-sky-700'
+                    : employeeBalances.exerciseBalance < 0
+                    ? 'text-amber-700'
+                    : 'text-emerald-700'
+                }`}
+              >
+                {employeeBalances.contractType === 'FORFAIT_JOUR'
+                  ? 'Forfait Jour'
+                  : employeeBalances.exerciseBalance > 0
+                  ? `+${employeeBalances.exerciseBalance}h`
+                  : `${employeeBalances.exerciseBalance}h`}
               </span>
             </div>
           </div>

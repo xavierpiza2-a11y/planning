@@ -8,6 +8,11 @@ import {
   getStoredDayNotes,
   saveStoredDayNotes,
 } from '../services/api';
+import {
+  calculateEmployeeBalances,
+  simulateShiftImpact,
+  parseWorkedHours,
+} from '../services/hoursService';
 import { CATEGORY_COLORS } from '../config/categoryStyles';
 import {
   X,
@@ -23,6 +28,11 @@ import {
   Home,
   GraduationCap,
   Sparkles,
+  Scale,
+  TrendingUp,
+  TrendingDown,
+  Palmtree,
+  Info,
 } from 'lucide-react';
 
 interface AdminShiftEditModalProps {
@@ -127,6 +137,34 @@ export const AdminShiftEditModal: React.FC<AdminShiftEditModalProps> = ({
 
   // Selected Option
   const chosenOption = options.find((o) => o.id === selectedOptionId);
+
+  // Active employee object & Live Real-Time Balances
+  const selectedEmployeeObj = useMemo(() => {
+    return (
+      employees.find((e) => e.name.toLowerCase() === targetEmployee.toLowerCase()) ||
+      employees[0] || { name: targetEmployee, color: '#166534' }
+    );
+  }, [employees, targetEmployee]);
+
+  const employeeBalances = useMemo(() => {
+    return calculateEmployeeBalances({
+      employee: selectedEmployeeObj,
+      selectedMonth,
+      targetDate,
+    });
+  }, [selectedEmployeeObj, selectedMonth, targetDate, isOpen]);
+
+  // Live simulation of chosen shift
+  const impactSimulation = useMemo(() => {
+    if (!chosenOption) return null;
+    return simulateShiftImpact({
+      currentBalances: employeeBalances,
+      targetDate,
+      currentShift: initialShift || '',
+      currentHours: initialHours,
+      newOption: chosenOption,
+    });
+  }, [employeeBalances, targetDate, initialShift, initialHours, chosenOption]);
 
   // Handle Save
   const handleSave = async () => {
@@ -284,6 +322,175 @@ export const AdminShiftEditModal: React.FC<AdminShiftEditModalProps> = ({
               onChange={(e) => setDayNoteInput(e.target.value)}
               className="w-full text-xs p-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-600 bg-white placeholder:text-slate-400 font-medium"
             />
+          </div>
+
+          {/* Real-time RH Balance Banner */}
+          <div className="bg-linear-to-br from-slate-900 to-slate-850 text-white rounded-2xl p-3.5 shadow-sm space-y-2.5">
+            <div className="flex items-center justify-between gap-2 flex-wrap">
+              <div className="flex items-center gap-2">
+                <span className="w-2.5 h-2.5 rounded-full bg-emerald-400" />
+                <span className="text-xs font-bold text-white">{selectedEmployeeObj.name}</span>
+                <span className="text-[10px] font-semibold px-2 py-0.5 rounded-md bg-white/10 text-emerald-300 border border-white/10">
+                  {employeeBalances.contractLabel}
+                </span>
+              </div>
+              <span className="text-[10px] text-slate-300 font-mono">
+                Exercice : {employeeBalances.exercise.label}
+              </span>
+            </div>
+
+            {/* Balances Grid */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1 border-t border-white/10 text-xs">
+              {/* Année */}
+              <div className="bg-white/5 rounded-xl p-2 border border-white/5">
+                <div className="text-[10px] text-slate-400 flex items-center gap-1 font-medium">
+                  <Scale className="w-3 h-3 text-emerald-400" />
+                  <span>Écart Année</span>
+                </div>
+                {employeeBalances.contractType === 'FORFAIT_JOUR' ? (
+                  <div className="font-bold text-slate-200 text-xs mt-0.5">Forfait Jour</div>
+                ) : (
+                  <div className="mt-0.5">
+                    <span
+                      className={`text-sm font-black tabular-nums ${
+                        employeeBalances.exerciseBalance > 0
+                          ? 'text-sky-300'
+                          : employeeBalances.exerciseBalance < 0
+                          ? 'text-amber-300'
+                          : 'text-emerald-300'
+                      }`}
+                    >
+                      {employeeBalances.exerciseBalance > 0
+                        ? `+${employeeBalances.exerciseBalance}h`
+                        : `${employeeBalances.exerciseBalance}h`}
+                    </span>
+                    <p className="text-[9px] text-slate-400 truncate">
+                      {employeeBalances.exerciseBalance > 0
+                        ? 'Vous lui devez'
+                        : employeeBalances.exerciseBalance < 0
+                        ? 'Il vous doit'
+                        : 'À l’équilibre'}
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              {/* Semaine */}
+              <div className="bg-white/5 rounded-xl p-2 border border-white/5">
+                <div className="text-[10px] text-slate-400 flex items-center gap-1 font-medium">
+                  <Clock className="w-3 h-3 text-sky-400" />
+                  <span>Écart Semaine</span>
+                </div>
+                {employeeBalances.contractType === 'FORFAIT_JOUR' ? (
+                  <div className="font-bold text-slate-200 text-xs mt-0.5">—</div>
+                ) : (
+                  <div className="mt-0.5">
+                    <span
+                      className={`text-sm font-black tabular-nums ${
+                        (employeeBalances.weekBalance || 0) > 0
+                          ? 'text-sky-300'
+                          : (employeeBalances.weekBalance || 0) < 0
+                          ? 'text-amber-300'
+                          : 'text-emerald-300'
+                      }`}
+                    >
+                      {(employeeBalances.weekBalance || 0) > 0
+                        ? `+${employeeBalances.weekBalance}h`
+                        : `${employeeBalances.weekBalance ?? 0}h`}
+                    </span>
+                    <p className="text-[9px] text-slate-400 truncate">
+                      {employeeBalances.weekLabel ? `S${employeeBalances.weekNumber}` : 'Semaine en cours'}
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              {/* Congés restants */}
+              <div className="bg-white/5 rounded-xl p-2 border border-white/5">
+                <div className="text-[10px] text-slate-400 flex items-center gap-1 font-medium">
+                  <Palmtree className="w-3 h-3 text-amber-400" />
+                  <span>CP Restants</span>
+                </div>
+                <div className="mt-0.5">
+                  <span className="text-sm font-black text-amber-300 tabular-nums">
+                    {employeeBalances.paidLeaveRemaining}
+                    <span className="text-[10px] font-normal text-slate-400 ml-0.5">j</span>
+                  </span>
+                  <p className="text-[9px] text-slate-400">
+                    sur {employeeBalances.paidLeaveTotal}j acquis
+                  </p>
+                </div>
+              </div>
+
+              {/* RTT restants */}
+              <div className="bg-white/5 rounded-xl p-2 border border-white/5">
+                <div className="text-[10px] text-slate-400 flex items-center gap-1 font-medium">
+                  <Sparkles className="w-3 h-3 text-teal-400" />
+                  <span>RTT Restants</span>
+                </div>
+                <div className="mt-0.5">
+                  <span className="text-sm font-black text-teal-300 tabular-nums">
+                    {employeeBalances.rttRemaining}
+                    <span className="text-[10px] font-normal text-slate-400 ml-0.5">j</span>
+                  </span>
+                  <p className="text-[9px] text-slate-400">
+                    {employeeBalances.rttTotal > 0
+                      ? `sur ${employeeBalances.rttTotal}j acquis`
+                      : 'Non applicable'}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* LIVE SIMULATOR: Shown when an option is selected */}
+            {impactSimulation && chosenOption && (
+              <div className="mt-2 p-2.5 rounded-xl bg-white/10 border border-emerald-500/40 text-xs space-y-1">
+                <div className="flex items-center justify-between text-[11px] font-bold">
+                  <span className="text-emerald-300 flex items-center gap-1">
+                    <Info className="w-3.5 h-3.5" />
+                    <span>Impact simulation : {chosenOption.label}</span>
+                  </span>
+                  <span
+                    className={`px-1.5 py-0.2 rounded font-black ${
+                      impactSimulation.deltaHours > 0
+                        ? 'bg-sky-500/30 text-sky-200'
+                        : impactSimulation.deltaHours < 0
+                        ? 'bg-amber-500/30 text-amber-200'
+                        : 'bg-white/10 text-slate-300'
+                    }`}
+                  >
+                    {impactSimulation.deltaHours > 0
+                      ? `+${impactSimulation.deltaHours}h`
+                      : `${impactSimulation.deltaHours}h`}
+                  </span>
+                </div>
+                <p className="text-[11px] text-slate-200">
+                  {impactSimulation.summaryText}
+                </p>
+                {employeeBalances.contractType !== 'FORFAIT_JOUR' && (
+                  <div className="flex items-center gap-3 text-[10px] text-slate-300 pt-0.5">
+                    {impactSimulation.newWeekBalance !== undefined && (
+                      <span>
+                        Nouveau solde Semaine :{' '}
+                        <strong className="text-white">
+                          {impactSimulation.newWeekBalance > 0
+                            ? `+${impactSimulation.newWeekBalance}h`
+                            : `${impactSimulation.newWeekBalance}h`}
+                        </strong>
+                      </span>
+                    )}
+                    <span>
+                      Nouveau solde Année :{' '}
+                      <strong className="text-white">
+                        {impactSimulation.newExerciseBalance > 0
+                          ? `+${impactSimulation.newExerciseBalance}h`
+                          : `${impactSimulation.newExerciseBalance}h`}
+                      </strong>
+                    </span>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Current Values Info Box */}

@@ -7,6 +7,7 @@ import { categorizeShift, formatHoursReadable } from '../config/constants';
 import { getCategoryDetails } from '../config/categoryStyles';
 import { getStoredTableau2Shifts, getStoredDayNotes } from '../services/api';
 import { exportScheduleToICS } from '../services/icsExport';
+import { calculateEmployeeBalances } from '../services/hoursService';
 import {
   Calendar as CalendarIcon,
   ListFilter,
@@ -23,6 +24,7 @@ import {
   Sunset,
   Palmtree,
   GraduationCap,
+  Scale,
 } from 'lucide-react';
 
 interface EmployeeViewProps {
@@ -113,9 +115,17 @@ export const EmployeeView: React.FC<EmployeeViewProps> = ({
     return list;
   }, [selectedMonth, schedule]);
 
+  // Live Balances & Annual Exercise (1er Juin - 31 Mai)
+  const employeeBalances = useMemo(() => {
+    return calculateEmployeeBalances({
+      employee: currentEmployee,
+      selectedMonth,
+      currentSchedule: schedule,
+    });
+  }, [currentEmployee, selectedMonth, schedule]);
+
   // Statistics calculation
   const stats = useMemo(() => {
-    let workedDays = 0;
     let restDays = 0;
     let rttOrLeaves = 0;
 
@@ -125,14 +135,12 @@ export const EmployeeView: React.FC<EmployeeViewProps> = ({
         restDays++;
       } else if (cat === 'CONGES' || cat === 'RTT') {
         rttOrLeaves++;
-      } else if (day.shift) {
-        workedDays++;
       }
     });
 
     const totalHours = schedule?.totalHours || 0;
 
-    return { workedDays, restDays, rttOrLeaves, totalHours };
+    return { restDays, rttOrLeaves, totalHours };
   }, [daysEntries, schedule]);
 
   // Auto-scroll to today
@@ -272,46 +280,90 @@ export const EmployeeView: React.FC<EmployeeViewProps> = ({
         onSelectMonth={onSelectMonth}
       />
 
-      {/* Monthly Metric Summary */}
-      <div className="grid grid-cols-4 gap-2">
-        <div className="bg-white rounded-xl border border-slate-200 p-2.5 text-center shadow-xs">
-          <div className="text-[10px] uppercase font-semibold text-slate-500 tracking-wider flex items-center justify-center gap-1 mb-1">
-            <Clock className="w-3 h-3 text-emerald-600" />
-            <span>Heures</span>
+      {/* Monthly & Annual Metric Summary */}
+      <div className="space-y-2">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+          {/* Heures du mois */}
+          <div className="bg-white rounded-xl border border-slate-200 p-2.5 text-center shadow-xs">
+            <div className="text-[10px] uppercase font-semibold text-slate-500 tracking-wider flex items-center justify-center gap-1 mb-1">
+              <Clock className="w-3 h-3 text-emerald-600" />
+              <span>Heures Mois</span>
+            </div>
+            <p className="text-base sm:text-lg font-bold text-slate-900 tabular-nums">
+              {stats.totalHours > 0 ? `${stats.totalHours}h` : '—'}
+            </p>
           </div>
-          <p className="text-base font-bold text-slate-900 tabular-nums">
-            {stats.totalHours > 0 ? `${stats.totalHours}h` : '—'}
-          </p>
+
+          {/* Écart Mois */}
+          <div className="bg-white rounded-xl border border-slate-200 p-2.5 text-center shadow-xs">
+            <div className="text-[10px] uppercase font-semibold text-slate-500 tracking-wider flex items-center justify-center gap-1 mb-1">
+              <Scale className="w-3 h-3 text-sky-600" />
+              <span>Écart Mois</span>
+            </div>
+            <p
+              className={`text-base sm:text-lg font-bold tabular-nums ${
+                employeeBalances.monthBalance > 0
+                  ? 'text-sky-700'
+                  : employeeBalances.monthBalance < 0
+                  ? 'text-amber-700'
+                  : 'text-slate-900'
+              }`}
+            >
+              {employeeBalances.contractType === 'FORFAIT_JOUR'
+                ? 'Forfait'
+                : employeeBalances.monthBalance > 0
+                ? `+${employeeBalances.monthBalance}h`
+                : `${employeeBalances.monthBalance}h`}
+            </p>
+          </div>
+
+          {/* Écart Année (1er Juin - 31 Mai) */}
+          <div className="bg-white rounded-xl border border-slate-200 p-2.5 text-center shadow-xs">
+            <div className="text-[10px] uppercase font-semibold text-slate-500 tracking-wider flex items-center justify-center gap-1 mb-1">
+              <Scale className="w-3 h-3 text-emerald-600" />
+              <span>Écart Année</span>
+            </div>
+            <p
+              className={`text-base sm:text-lg font-bold tabular-nums ${
+                employeeBalances.exerciseBalance > 0
+                  ? 'text-sky-700'
+                  : employeeBalances.exerciseBalance < 0
+                  ? 'text-amber-700'
+                  : 'text-emerald-700'
+              }`}
+            >
+              {employeeBalances.contractType === 'FORFAIT_JOUR'
+                ? 'Forfait'
+                : employeeBalances.exerciseBalance > 0
+                ? `+${employeeBalances.exerciseBalance}h`
+                : `${employeeBalances.exerciseBalance}h`}
+            </p>
+          </div>
+
+          {/* Congés Payés Restants */}
+          <div className="bg-white rounded-xl border border-slate-200 p-2.5 text-center shadow-xs">
+            <div className="text-[10px] uppercase font-semibold text-slate-500 tracking-wider flex items-center justify-center gap-1 mb-1">
+              <Palmtree className="w-3 h-3 text-amber-600" />
+              <span>CP Restants</span>
+            </div>
+            <p className="text-base sm:text-lg font-bold text-amber-700 tabular-nums">
+              {employeeBalances.paidLeaveRemaining}
+              <span className="text-xs font-normal text-slate-500 ml-0.5">j</span>
+            </p>
+          </div>
         </div>
 
-        <div className="bg-white rounded-xl border border-slate-200 p-2.5 text-center shadow-xs">
-          <div className="text-[10px] uppercase font-semibold text-slate-500 tracking-wider flex items-center justify-center gap-1 mb-1">
-            <Briefcase className="w-3 h-3 text-blue-600" />
-            <span>Travaillés</span>
-          </div>
-          <p className="text-base font-bold text-slate-900 tabular-nums">
-            {stats.workedDays} <span className="text-xs font-normal text-slate-500">j</span>
-          </p>
-        </div>
-
-        <div className="bg-white rounded-xl border border-slate-200 p-2.5 text-center shadow-xs">
-          <div className="text-[10px] uppercase font-semibold text-slate-500 tracking-wider flex items-center justify-center gap-1 mb-1">
-            <Home className="w-3 h-3 text-slate-500" />
-            <span>Repos</span>
-          </div>
-          <p className="text-base font-bold text-slate-900 tabular-nums">
-            {stats.restDays} <span className="text-xs font-normal text-slate-500">j</span>
-          </p>
-        </div>
-
-        <div className="bg-white rounded-xl border border-slate-200 p-2.5 text-center shadow-xs">
-          <div className="text-[10px] uppercase font-semibold text-slate-500 tracking-wider flex items-center justify-center gap-1 mb-1">
-            <Sparkles className="w-3 h-3 text-teal-600" />
-            <span>RTT/Congés</span>
-          </div>
-          <p className="text-base font-bold text-slate-900 tabular-nums">
-            {stats.rttOrLeaves} <span className="text-xs font-normal text-slate-500">j</span>
-          </p>
+        {/* Info strip */}
+        <div className="flex items-center justify-between px-2 text-[11px] text-slate-500 flex-wrap gap-1">
+          <span>
+            Exercice : <strong className="text-slate-700">{employeeBalances.exercise.label}</strong>
+          </span>
+          <span className="flex items-center gap-2">
+            <span>Régime : <strong className="text-slate-700">{employeeBalances.contractLabel}</strong></span>
+            {employeeBalances.rttTotal > 0 && (
+              <span>· RTT restants : <strong className="text-teal-700">{employeeBalances.rttRemaining}j</strong></span>
+            )}
+          </span>
         </div>
       </div>
 
