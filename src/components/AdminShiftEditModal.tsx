@@ -341,69 +341,101 @@ export const AdminShiftEditModal: React.FC<AdminShiftEditModalProps> = ({
 
             {/* Balances Grid */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1 border-t border-white/10 text-xs">
-              {/* Année */}
-              <div className="bg-white/5 rounded-xl p-2 border border-white/5">
-                <div className="text-[10px] text-slate-400 flex items-center gap-1 font-medium">
-                  <Scale className="w-3 h-3 text-emerald-400" />
-                  <span>Écart Année</span>
-                </div>
-                {employeeBalances.contractType === 'FORFAIT_JOUR' ? (
-                  <div className="font-bold text-slate-200 text-xs mt-0.5">Forfait Jour</div>
-                ) : (
-                  <div className="mt-0.5">
-                    <span
-                      className={`text-sm font-black tabular-nums ${
-                        employeeBalances.exerciseBalance > 0
-                          ? 'text-sky-300'
-                          : employeeBalances.exerciseBalance < 0
-                          ? 'text-amber-300'
-                          : 'text-emerald-300'
-                      }`}
-                    >
-                      {employeeBalances.exerciseBalance > 0
-                        ? `+${employeeBalances.exerciseBalance}h`
-                        : `${employeeBalances.exerciseBalance}h`}
-                    </span>
-                    <p className="text-[9px] text-slate-400 truncate">
-                      {employeeBalances.exerciseBalance > 0
-                        ? 'Vous lui devez'
-                        : employeeBalances.exerciseBalance < 0
-                        ? 'Il vous doit'
-                        : 'À l’équilibre'}
-                    </p>
+              {employeeBalances.contractType === 'FORFAIT_JOUR' ? (
+                <>
+                  {/* Forfait Jour : Jours Travaillés */}
+                  <div className="bg-white/5 rounded-xl p-2 border border-white/5">
+                    <div className="text-[10px] text-slate-400 flex items-center gap-1 font-medium">
+                      <Briefcase className="w-3 h-3 text-emerald-400" />
+                      <span>Jours Faits</span>
+                    </div>
+                    <div className="mt-0.5">
+                      <span className="text-sm font-black text-white tabular-nums">
+                        {employeeBalances.exerciseWorkedDays}
+                        <span className="text-[10px] font-normal text-slate-400 ml-0.5">/ {employeeBalances.forfaitDaysQuota}j</span>
+                      </span>
+                      <p className="text-[9px] text-slate-400 truncate">
+                        AT comptabilisé 1j
+                      </p>
+                    </div>
                   </div>
-                )}
-              </div>
 
-              {/* Semaine */}
-              <div className="bg-white/5 rounded-xl p-2 border border-white/5">
-                <div className="text-[10px] text-slate-400 flex items-center gap-1 font-medium">
-                  <Clock className="w-3 h-3 text-sky-400" />
-                  <span>Écart Semaine</span>
-                </div>
-                {employeeBalances.contractType === 'FORFAIT_JOUR' ? (
-                  <div className="font-bold text-slate-200 text-xs mt-0.5">—</div>
-                ) : (
-                  <div className="mt-0.5">
-                    <span
-                      className={`text-sm font-black tabular-nums ${
-                        (employeeBalances.weekBalance || 0) > 0
-                          ? 'text-sky-300'
-                          : (employeeBalances.weekBalance || 0) < 0
-                          ? 'text-amber-300'
-                          : 'text-emerald-300'
-                      }`}
-                    >
-                      {(employeeBalances.weekBalance || 0) > 0
-                        ? `+${employeeBalances.weekBalance}h`
-                        : `${employeeBalances.weekBalance ?? 0}h`}
-                    </span>
-                    <p className="text-[9px] text-slate-400 truncate">
-                      {employeeBalances.weekLabel ? `S${employeeBalances.weekNumber}` : 'Semaine en cours'}
-                    </p>
+                  {/* Forfait Jour : Reste à faire sur l'exercice */}
+                  <div className="bg-white/5 rounded-xl p-2 border border-white/5">
+                    <div className="text-[10px] text-slate-400 flex items-center gap-1 font-medium">
+                      <Scale className="w-3 h-3 text-sky-400" />
+                      <span>Reste à faire</span>
+                    </div>
+                    <div className="mt-0.5">
+                      <span className="text-sm font-black text-sky-300 tabular-nums">
+                        {employeeBalances.forfaitDaysRemaining}
+                        <span className="text-[10px] font-normal text-slate-400 ml-0.5">j</span>
+                      </span>
+                      <p className="text-[9px] text-slate-400 truncate">
+                        sur l'exercice
+                      </p>
+                    </div>
                   </div>
-                )}
-              </div>
+                </>
+              ) : (
+                <>
+                  {/* Régimes Horaires : Écart Année */}
+                  <div className="bg-white/5 rounded-xl p-2 border border-white/5">
+                    <div className="text-[10px] text-slate-400 flex items-center gap-1 font-medium">
+                      <Scale className="w-3 h-3 text-emerald-400" />
+                      <span>Écart Année</span>
+                    </div>
+                    <div className="mt-0.5">
+                      <span
+                        className={`text-sm font-black tabular-nums ${
+                          employeeBalances.exerciseBalance > 0
+                            ? 'text-sky-300'
+                            : employeeBalances.exerciseBalance < 0
+                            ? 'text-amber-300'
+                            : 'text-emerald-300'
+                        }`}
+                      >
+                        {employeeBalances.exerciseBalance > 0
+                          ? `+${employeeBalances.exerciseBalance}h`
+                          : `${employeeBalances.exerciseBalance}h`}
+                      </span>
+                      <p className="text-[9px] text-slate-400 truncate">
+                        {employeeBalances.exerciseBalance > 0
+                          ? 'Vous lui devez'
+                          : employeeBalances.exerciseBalance < 0
+                          ? 'Il vous doit'
+                          : 'À l’équilibre'}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Régimes Horaires : Écart Mois */}
+                  <div className="bg-white/5 rounded-xl p-2 border border-white/5">
+                    <div className="text-[10px] text-slate-400 flex items-center gap-1 font-medium">
+                      <Clock className="w-3 h-3 text-sky-400" />
+                      <span>Écart Mois</span>
+                    </div>
+                    <div className="mt-0.5">
+                      <span
+                        className={`text-sm font-black tabular-nums ${
+                          employeeBalances.monthBalance > 0
+                            ? 'text-sky-300'
+                            : employeeBalances.monthBalance < 0
+                            ? 'text-amber-300'
+                            : 'text-emerald-300'
+                        }`}
+                      >
+                        {employeeBalances.monthBalance > 0
+                          ? `+${employeeBalances.monthBalance}h`
+                          : `${employeeBalances.monthBalance}h`}
+                      </span>
+                      <p className="text-[9px] text-slate-400 truncate">
+                        Base : {employeeBalances.expectedMonthHours}h
+                      </p>
+                    </div>
+                  </div>
+                </>
+              )}
 
               {/* Congés restants */}
               <div className="bg-white/5 rounded-xl p-2 border border-white/5">

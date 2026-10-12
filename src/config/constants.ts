@@ -2,8 +2,6 @@ import type { Employee, MonthItem, ShiftCategory, Tableau2ShiftOption, ShiftCate
 
 export const DEFAULT_API_TOKEN = 'PLANNING';
 
-export const ONESIGNAL_APP_ID = '100b315e-6d8b-4ffa-a011-2192d3d6e102';
-
 export const DEFAULT_ADMIN_PIN = '000000';
 
 /**
@@ -16,6 +14,8 @@ export const DEFAULT_CATEGORIES: ShiftCategoryItem[] = [
   { id: 'cat_repos', name: 'REPOS', color: 'slate', icon: 'home' },
   { id: 'cat_conges', name: 'CONGES', color: 'orange', icon: 'palmtree' },
   { id: 'cat_rtt', name: 'RTT', color: 'teal', icon: 'sparkles' },
+  { id: 'cat_ferie', name: 'FERIE', color: 'purple', icon: 'calendar' },
+  { id: 'cat_at', name: 'AT', color: 'rose', icon: 'heart' },
   { id: 'cat_formation', name: 'FORMATION', color: 'purple', icon: 'graduation-cap' },
   { id: 'cat_horaire', name: 'HORAIRE', color: 'indigo', icon: 'clock' },
   { id: 'cat_autre', name: 'AUTRE', color: 'zinc', icon: 'tag' },
@@ -180,14 +180,25 @@ export const DEFAULT_TABLEAU2_SHIFTS: Tableau2ShiftOption[] = [
     dayStatus: 'PRESENT',
   },
   {
+    id: 'ferie',
+    shift: 'FERIE',
+    hours: '',
+    category: 'FERIE',
+    color: 'purple',
+    label: 'FÉRIÉ',
+    description: 'Jour férié chômé (-7h à faire sur le mois / -1j forfait)',
+    hoursDecimal: 0,
+    dayStatus: 'REPOS',
+  },
+  {
     id: 'maladie',
     shift: 'AT',
     hours: '',
-    category: 'REPOS',
+    category: 'AT',
     color: 'rose',
     label: 'ARRÊT MALADIE / AT',
-    description: 'Arrêt de travail',
-    hoursDecimal: 0,
+    description: 'Arrêt de travail (comptabilisé 7h en annualisé ou 1j en forfait jour)',
+    hoursDecimal: 7,
     dayStatus: 'ABSENT',
   },
 ];
@@ -236,7 +247,15 @@ export function categorizeShift(shiftText: string, hoursText?: string): ShiftCat
   const s = (shiftText || '').trim().toUpperCase();
   const h = (hoursText || '').toLowerCase();
 
-  if (s === 'REPOS' || s === 'AT' || s === 'MALADIE') {
+  if (s === 'FERIE' || s === 'FÉRIÉ' || s === 'FERIE_CHOME') {
+    return 'FERIE';
+  }
+
+  if (s === 'AT' || s === 'MALADIE' || s === 'ACCIDENT') {
+    return 'AT';
+  }
+
+  if (s === 'REPOS') {
     return 'REPOS';
   }
 

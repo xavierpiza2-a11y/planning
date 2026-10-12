@@ -19,7 +19,6 @@ import {
   DEFAULT_TABLEAU2_SHIFTS,
   DEFAULT_CATEGORIES,
 } from '../config/constants';
-import { displayPushNotification } from './onesignal';
 import { realtimeClient, RealtimeMessage } from './realtimeClient';
 
 // Local storage display cache keys
@@ -116,12 +115,6 @@ if (typeof window !== 'undefined') {
           // Update individual cache
           localStorage.setItem(`${CACHE_PREFIX_SCHEDULE}${employeeName}_${monthKey}`, JSON.stringify(schedule));
         }
-
-        // Show push notification if someone else edited
-        displayPushNotification(
-          `${getStoreName()} · Planning mis à jour`,
-          `${employeeName} : ${dateKey} -> ${shift}${hours ? ` (${hours})` : ''}`
-        );
 
         notifyDataChange('SHIFT_UPDATED', msg);
         break;

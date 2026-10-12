@@ -30,7 +30,6 @@ import {
   getStoreName,
   saveStoreName,
 } from './services/api';
-import { initOneSignal, requestPushPermission, checkPushPermission } from './services/onesignal';
 import { useOnlineStatus } from './hooks/useOnlineStatus';
 import { useRealtimeSync } from './hooks/useRealtimeSync';
 import { Header } from './components/Header';
@@ -44,7 +43,7 @@ import { ChangesModal } from './components/ChangesModal';
 import { HistoryModal } from './components/HistoryModal';
 import { PWAInstallBanner } from './components/PWAInstallBanner';
 import { TokenGate } from './components/TokenGate';
-import { WifiOff, Bell, UserCheck } from 'lucide-react';
+import { WifiOff, UserCheck } from 'lucide-react';
 
 const STORAGE_KEY_EMPLOYEE = 'planning_logged_emp';
 const STORAGE_KEY_MONTH = 'planning_selected_month';
@@ -151,7 +150,6 @@ export default function App() {
   const [historyList, setHistoryList] = useState<HistoryEntry[]>([]);
   const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
   const [isLoadingHistory, setIsLoadingHistory] = useState(false);
-  const [pushStatus, setPushStatus] = useState<string>('default');
 
   // Global Admin Mode activation state (protected strictly by PIN)
   const [isAdminActive, setIsAdminActive] = useState<boolean>(false);
@@ -241,12 +239,10 @@ export default function App() {
           );
           const safeMatch = isResp ? { ...match, role: 'Responsable', isAdmin: true } : match;
           setCurrentEmployee(safeMatch);
-          initOneSignal(safeMatch.name);
         } else if (initialEmployeesList.length > 0) {
           const safeFirst = initialEmployeesList[0];
           setCurrentEmployee(safeFirst);
           localStorage.setItem(STORAGE_KEY_EMPLOYEE, safeFirst.name);
-          initOneSignal(safeFirst.name);
         }
       } else {
         const resp = initialEmployeesList.find((e: Employee) => e.name.toLowerCase() === 'responsable') || initialEmployeesList[0];
@@ -257,8 +253,6 @@ export default function App() {
         setIsProfileModalOpen(true);
       }
     });
-
-    checkPushPermission().then(setPushStatus);
   }, [isTokenValidated]);
 
   // Handle successful token validation
@@ -297,7 +291,6 @@ export default function App() {
   const handleSelectEmployee = (emp: Employee) => {
     setCurrentEmployee(emp);
     localStorage.setItem(STORAGE_KEY_EMPLOYEE, emp.name);
-    initOneSignal(emp.name);
 
     const isNewEmpAdmin = Boolean(
       emp.isAdmin ||
@@ -309,7 +302,6 @@ export default function App() {
       : emp;
     setCurrentEmployee(safeEmp);
     localStorage.setItem(STORAGE_KEY_EMPLOYEE, safeEmp.name);
-    initOneSignal(safeEmp.name);
 
     if (!isNewEmpAdmin && !isAdminActive) {
       if (activeTab === 'admin') {
@@ -531,12 +523,6 @@ export default function App() {
     setIsChangesModalOpen(false);
   };
 
-  // Request notifications
-  const handleEnableNotifications = async () => {
-    const granted = await requestPushPermission();
-    setPushStatus(granted ? 'granted' : 'denied');
-  };
-
   // Handle schedule shift update
   const handleShiftUpdated = (
     employeeName: string,
@@ -654,24 +640,6 @@ export default function App() {
         <div className="bg-amber-500 text-amber-950 px-4 py-1.5 text-xs font-semibold flex items-center justify-center gap-1.5 shadow-xs">
           <WifiOff className="w-3.5 h-3.5" />
           <span>Mode Hors-ligne : affichage des données en cache local</span>
-        </div>
-      )}
-
-      {/* Push Notification Opt-in Prompt */}
-      {pushStatus === 'default' && currentEmployee && (
-        <div className="bg-emerald-50 border-b border-emerald-200/80 px-4 py-2 flex items-center justify-between gap-3 text-xs">
-          <div className="flex items-center gap-2 text-emerald-950 min-w-0">
-            <Bell className="w-4 h-4 text-emerald-700 shrink-0" />
-            <span className="truncate">
-              Activer les notifications push en cas de modification de planning ?
-            </span>
-          </div>
-          <button
-            onClick={handleEnableNotifications}
-            className="px-3 py-1 bg-emerald-700 text-white font-semibold rounded-md hover:bg-emerald-800 transition-colors shrink-0 text-[11px]"
-          >
-            Activer
-          </button>
         </div>
       )}
 

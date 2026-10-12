@@ -283,7 +283,7 @@ export const EmployeeView: React.FC<EmployeeViewProps> = ({
       {/* Monthly & Annual Metric Summary */}
       <div className="space-y-2">
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-          {/* Heures du mois */}
+          {/* Card 1: Heures du mois */}
           <div className="bg-white rounded-xl border border-slate-200 p-2.5 text-center shadow-xs">
             <div className="text-[10px] uppercase font-semibold text-slate-500 tracking-wider flex items-center justify-center gap-1 mb-1">
               <Clock className="w-3 h-3 text-emerald-600" />
@@ -294,63 +294,101 @@ export const EmployeeView: React.FC<EmployeeViewProps> = ({
             </p>
           </div>
 
-          {/* Écart Mois */}
-          <div className="bg-white rounded-xl border border-slate-200 p-2.5 text-center shadow-xs">
-            <div className="text-[10px] uppercase font-semibold text-slate-500 tracking-wider flex items-center justify-center gap-1 mb-1">
-              <Scale className="w-3 h-3 text-sky-600" />
-              <span>Écart Mois</span>
-            </div>
-            <p
-              className={`text-base sm:text-lg font-bold tabular-nums ${
-                employeeBalances.monthBalance > 0
-                  ? 'text-sky-700'
-                  : employeeBalances.monthBalance < 0
-                  ? 'text-amber-700'
-                  : 'text-slate-900'
-              }`}
-            >
-              {employeeBalances.contractType === 'FORFAIT_JOUR'
-                ? 'Forfait'
-                : employeeBalances.monthBalance > 0
-                ? `+${employeeBalances.monthBalance}h`
-                : `${employeeBalances.monthBalance}h`}
-            </p>
-          </div>
+          {employeeBalances.contractType === 'FORFAIT_JOUR' ? (
+            <>
+              {/* Forfait Jour : Jours Travaillés Exercice */}
+              <div className="bg-white rounded-xl border border-slate-200 p-2.5 text-center shadow-xs">
+                <div className="text-[10px] uppercase font-semibold text-slate-500 tracking-wider flex items-center justify-center gap-1 mb-1">
+                  <Briefcase className="w-3 h-3 text-emerald-600" />
+                  <span>Jours Faits</span>
+                </div>
+                <p className="text-base sm:text-lg font-bold text-slate-900 tabular-nums">
+                  {employeeBalances.exerciseWorkedDays}
+                  <span className="text-xs font-normal text-slate-500 ml-0.5">/ {employeeBalances.forfaitDaysQuota}j</span>
+                </p>
+              </div>
 
-          {/* Écart Année (1er Juin - 31 Mai) */}
-          <div className="bg-white rounded-xl border border-slate-200 p-2.5 text-center shadow-xs">
-            <div className="text-[10px] uppercase font-semibold text-slate-500 tracking-wider flex items-center justify-center gap-1 mb-1">
-              <Scale className="w-3 h-3 text-emerald-600" />
-              <span>Écart Année</span>
-            </div>
-            <p
-              className={`text-base sm:text-lg font-bold tabular-nums ${
-                employeeBalances.exerciseBalance > 0
-                  ? 'text-sky-700'
-                  : employeeBalances.exerciseBalance < 0
-                  ? 'text-amber-700'
-                  : 'text-emerald-700'
-              }`}
-            >
-              {employeeBalances.contractType === 'FORFAIT_JOUR'
-                ? 'Forfait'
-                : employeeBalances.exerciseBalance > 0
-                ? `+${employeeBalances.exerciseBalance}h`
-                : `${employeeBalances.exerciseBalance}h`}
-            </p>
-          </div>
+              {/* Forfait Jour : Reste à faire */}
+              <div className="bg-white rounded-xl border border-slate-200 p-2.5 text-center shadow-xs">
+                <div className="text-[10px] uppercase font-semibold text-slate-500 tracking-wider flex items-center justify-center gap-1 mb-1">
+                  <Scale className="w-3 h-3 text-sky-600" />
+                  <span>Reste à faire</span>
+                </div>
+                <p className="text-base sm:text-lg font-bold text-sky-700 tabular-nums">
+                  {employeeBalances.forfaitDaysRemaining}
+                  <span className="text-xs font-normal text-slate-500 ml-0.5">j</span>
+                </p>
+              </div>
 
-          {/* Congés Payés Restants */}
-          <div className="bg-white rounded-xl border border-slate-200 p-2.5 text-center shadow-xs">
-            <div className="text-[10px] uppercase font-semibold text-slate-500 tracking-wider flex items-center justify-center gap-1 mb-1">
-              <Palmtree className="w-3 h-3 text-amber-600" />
-              <span>CP Restants</span>
-            </div>
-            <p className="text-base sm:text-lg font-bold text-amber-700 tabular-nums">
-              {employeeBalances.paidLeaveRemaining}
-              <span className="text-xs font-normal text-slate-500 ml-0.5">j</span>
-            </p>
-          </div>
+              {/* Forfait Jour : RTT Restants */}
+              <div className="bg-white rounded-xl border border-slate-200 p-2.5 text-center shadow-xs">
+                <div className="text-[10px] uppercase font-semibold text-slate-500 tracking-wider flex items-center justify-center gap-1 mb-1">
+                  <Sparkles className="w-3 h-3 text-teal-600" />
+                  <span>RTT Restants</span>
+                </div>
+                <p className="text-base sm:text-lg font-bold text-teal-700 tabular-nums">
+                  {employeeBalances.rttRemaining}
+                  <span className="text-xs font-normal text-slate-500 ml-0.5">j</span>
+                </p>
+              </div>
+            </>
+          ) : (
+            <>
+              {/* Régimes Horaires : Écart Mois */}
+              <div className="bg-white rounded-xl border border-slate-200 p-2.5 text-center shadow-xs">
+                <div className="text-[10px] uppercase font-semibold text-slate-500 tracking-wider flex items-center justify-center gap-1 mb-1">
+                  <Scale className="w-3 h-3 text-sky-600" />
+                  <span>Écart Mois</span>
+                </div>
+                <p
+                  className={`text-base sm:text-lg font-bold tabular-nums ${
+                    employeeBalances.monthBalance > 0
+                      ? 'text-sky-700'
+                      : employeeBalances.monthBalance < 0
+                      ? 'text-amber-700'
+                      : 'text-slate-900'
+                  }`}
+                >
+                  {employeeBalances.monthBalance > 0
+                    ? `+${employeeBalances.monthBalance}h`
+                    : `${employeeBalances.monthBalance}h`}
+                </p>
+              </div>
+
+              {/* Régimes Horaires : Écart Année (1er Juin - 31 Mai) */}
+              <div className="bg-white rounded-xl border border-slate-200 p-2.5 text-center shadow-xs">
+                <div className="text-[10px] uppercase font-semibold text-slate-500 tracking-wider flex items-center justify-center gap-1 mb-1">
+                  <Scale className="w-3 h-3 text-emerald-600" />
+                  <span>Écart Année</span>
+                </div>
+                <p
+                  className={`text-base sm:text-lg font-bold tabular-nums ${
+                    employeeBalances.exerciseBalance > 0
+                      ? 'text-sky-700'
+                      : employeeBalances.exerciseBalance < 0
+                      ? 'text-amber-700'
+                      : 'text-emerald-700'
+                  }`}
+                >
+                  {employeeBalances.exerciseBalance > 0
+                    ? `+${employeeBalances.exerciseBalance}h`
+                    : `${employeeBalances.exerciseBalance}h`}
+                </p>
+              </div>
+
+              {/* Congés Payés Restants */}
+              <div className="bg-white rounded-xl border border-slate-200 p-2.5 text-center shadow-xs">
+                <div className="text-[10px] uppercase font-semibold text-slate-500 tracking-wider flex items-center justify-center gap-1 mb-1">
+                  <Palmtree className="w-3 h-3 text-amber-600" />
+                  <span>CP Restants</span>
+                </div>
+                <p className="text-base sm:text-lg font-bold text-amber-700 tabular-nums">
+                  {employeeBalances.paidLeaveRemaining}
+                  <span className="text-xs font-normal text-slate-500 ml-0.5">j</span>
+                </p>
+              </div>
+            </>
+          )}
         </div>
 
         {/* Info strip */}

@@ -317,6 +317,12 @@ export function getCategoryDetails(
   } else if (cleanCat === 'FORMATION') {
     defaultColorId = 'purple';
     defaultIconId = 'graduation-cap';
+  } else if (cleanCat === 'FERIE' || cleanCat === 'FÉRIÉ') {
+    defaultColorId = 'purple';
+    defaultIconId = 'calendar';
+  } else if (cleanCat === 'AT' || cleanCat === 'MALADIE') {
+    defaultColorId = 'rose';
+    defaultIconId = 'heart';
   } else if (cleanCat === 'HORAIRE') {
     defaultColorId = 'indigo';
     defaultIconId = 'clock';

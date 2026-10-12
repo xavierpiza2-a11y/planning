@@ -1,4 +1,4 @@
-import { Employee, EmployeeMonthSchedule, Tableau2ShiftOption } from '../types/planning';
+import { Employee, EmployeeMonthSchedule, Tableau2ShiftOption, ContractType, MonthItem } from '../types/planning';
 import { categorizeShift } from '../config/constants';
 
 export interface AnnualExerciseInfo {
@@ -9,6 +9,59 @@ export interface AnnualExerciseInfo {
   months: string[]; // 12 month keys from "YYYY-06" to "YYYY+1-05"
   selectedMonthIndex: number; // 0 to 11
   elapsedMonths: number; // 1 to 12
+}
+
+/**
+ * Computes official French public holidays for a given year.
+ * Includes all fixed and mobile (Easter Monday, Ascension, Pentecost Monday) public holidays.
+ */
+export function getFrenchPublicHolidays(year: number): Record<string, string> {
+  // Easter calculation (Meeus/Jones/Butcher algorithm)
+  const a = year % 19;
+  const b = Math.floor(year / 100);
+  const c = year % 100;
+  const d = Math.floor(b / 4);
+  const e = b % 4;
+  const f = Math.floor((b + 8) / 25);
+  const g = Math.floor((b - f + 1) / 3);
+  const h = (19 * a + b - d - g + 15) % 30;
+  const i = Math.floor(c / 4);
+  const k = c % 4;
+  const l = (32 + 2 * e + 2 * i - h - k) % 7;
+  const m = Math.floor((a + 11 * h + 22 * l) / 451);
+  const month = Math.floor((h + l - 7 * m + 114) / 31);
+  const day = ((h + l - 7 * m + 114) % 31) + 1;
+
+  const easterDate = new Date(year, month - 1, day);
+
+  // Lundi de Pâques (+1 day)
+  const easterMonday = new Date(easterDate);
+  easterMonday.setDate(easterDate.getDate() + 1);
+
+  // Ascension (+39 days)
+  const ascension = new Date(easterDate);
+  ascension.setDate(easterDate.getDate() + 39);
+
+  // Lundi de Pentecôte (+50 days)
+  const pentecostMonday = new Date(easterDate);
+  pentecostMonday.setDate(easterDate.getDate() + 50);
+
+  const formatKey = (d: Date) =>
+    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+
+  return {
+    [`${year}-01-01`]: "Jour de l'An",
+    [formatKey(easterMonday)]: 'Lundi de Pâques',
+    [`${year}-05-01`]: 'Fête du Travail',
+    [`${year}-05-08`]: 'Victoire 1945',
+    [formatKey(ascension)]: 'Ascension',
+    [formatKey(pentecostMonday)]: 'Lundi de Pentecôte',
+    [`${year}-07-14`]: 'Fête Nationale',
+    [`${year}-08-15`]: 'Assomption',
+    [`${year}-11-01`]: 'Toussaint',
+    [`${year}-11-11`]: 'Armistice 1918',
+    [`${year}-12-25`]: 'Noël',
+  };
 }
 
 /**
@@ -56,31 +109,142 @@ export function getAnnualExercise(targetDateOrMonth?: string | Date): AnnualExer
     label: `1er Juin ${yearStart} – 31 Mai ${yearEnd}`,
     key: `${yearStart}-${yearEnd}`,
     months,
-    selectedMonthIndex,
+    selectedMonthIndex: selectedMonthIndex >= 0 ? selectedMonthIndex : 0,
     elapsedMonths,
   };
 }
 
 /**
- * Parses worked hours from shift text and hours string.
+ * Analyzes the working calendar for a given month (Monday to Friday, automatic weekend rest).
+ * Correctly accounts for French public holidays on weekdays and any custom "FERIE" shifts.
+ * Supports manual customization/override from month settings (customWorkingDays, customBaseHours).
+ * Example: January 2027 has 21 weekdays (Mon-Fri) minus 1 holiday (Jan 1) = 20 net working days = 140h.
  */
-export function parseWorkedHours(shiftText: string, hoursText?: string): number {
+export function getMonthWorkingCalendar(
+  monthKey: string,
+  employeeDays?: Record<string, { shift: string; hours?: string }>,
+  customMonthItem?: MonthItem | null
+): {
+  weekdaysCount: number;
+  ferieCount: number;
+  netWorkingDays: number;
+  standardBaseHours: number;
+  holidaysList: Array<{ dateKey: string; name: string }>;
+  isCustomized: boolean;
+} {
+  const [yStr, mStr] = monthKey.split('-');
+  const year = parseInt(yStr, 10);
+  const month = parseInt(mStr, 10);
+  const daysInMonth = new Date(year, month, 0).getDate();
+
+  const publicHolidays = getFrenchPublicHolidays(year);
+
+  let weekdaysCount = 0;
+  let ferieCount = 0;
+  const holidaysList: Array<{ dateKey: string; name: string }> = [];
+
+  for (let d = 1; d <= daysInMonth; d++) {
+    const date = new Date(year, month - 1, d);
+    const dayOfWeek = date.getDay(); // 0 = Sun, 1 = Mon ... 6 = Sat
+    const isWeekday = dayOfWeek >= 1 && dayOfWeek <= 5;
+
+    if (isWeekday) {
+      weekdaysCount++;
+      const dateKey = `${year}-${String(month).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+
+      // Check if official public holiday
+      const holidayName = publicHolidays[dateKey];
+
+      // Check if user has explicitly assigned a "FERIE" shift
+      const dayData = employeeDays ? employeeDays[dateKey] : undefined;
+      const isShiftFerie =
+        dayData &&
+        (categorizeShift(dayData.shift, dayData.hours) === 'FERIE' ||
+          /^(ferie|férié)/i.test((dayData.shift || '').trim()));
+
+      if (holidayName || isShiftFerie) {
+        ferieCount++;
+        holidaysList.push({
+          dateKey,
+          name: holidayName || 'Jour Férié',
+        });
+      }
+    }
+  }
+
+  // Automatic calculation based on open working days (Mon-Fri minus holidays)
+  let netWorkingDays = Math.max(0, weekdaysCount - ferieCount);
+  let standardBaseHours = netWorkingDays * 7;
+  let isCustomized = false;
+
+  // If month settings override working days or base hours
+  if (customMonthItem) {
+    if (typeof customMonthItem.customWorkingDays === 'number' && customMonthItem.customWorkingDays >= 0) {
+      netWorkingDays = customMonthItem.customWorkingDays;
+      standardBaseHours = netWorkingDays * 7;
+      isCustomized = true;
+    }
+    if (typeof customMonthItem.customBaseHours === 'number' && customMonthItem.customBaseHours >= 0) {
+      standardBaseHours = customMonthItem.customBaseHours;
+      isCustomized = true;
+    }
+  }
+
+  return {
+    weekdaysCount,
+    ferieCount,
+    netWorkingDays,
+    standardBaseHours,
+    holidaysList,
+    isCustomized,
+  };
+}
+
+/**
+ * Parses worked hours from shift text and hours string.
+ * - Repos, Congés/CP, RTT, Férié = 0h ("ne doivent pas être valorisé", férié est chômé et ajuste la base)
+ * - AT (Arrêt de travail) = 7h pour les régimes horaires (annualisé et 35h)
+ */
+export function parseWorkedHours(
+  shiftText: string,
+  hoursText?: string,
+  contractType?: ContractType
+): number {
   if (!shiftText && !hoursText) return 0;
   const cat = categorizeShift(shiftText, hoursText);
-  if (cat === 'REPOS' || cat === 'CONGES' || cat === 'RTT') {
+  const sUpper = (shiftText || '').trim().toUpperCase();
+
+  // 1. Non-worked non-valorised shifts
+  if (
+    cat === 'REPOS' ||
+    cat === 'CONGES' ||
+    cat === 'RTT' ||
+    cat === 'FERIE' ||
+    sUpper === 'REPOS' ||
+    sUpper === 'CONGES' ||
+    sUpper === 'CP' ||
+    sUpper === 'RTT' ||
+    sUpper === 'FERIE' ||
+    sUpper === 'FÉRIÉ'
+  ) {
     return 0;
+  }
+
+  // 2. AT / Arrêt de travail : 7h sur l'annualisation et régimes horaires
+  if (cat === 'AT' || sUpper === 'AT' || sUpper === 'MALADIE') {
+    return 7;
   }
 
   const hStr = (hoursText || '').trim();
 
-  // 1. Direct single numeric value like "7", "7h", "7.5", "7,5", "8h"
+  // 3. Direct single numeric value like "7", "7h", "7.5", "7,5", "8h"
   const singleNumMatch = hStr.match(/^(\d+(?:[.,]\d+)?)\s*h?$/i);
   if (singleNumMatch) {
     const val = parseFloat(singleNumMatch[1].replace(',', '.'));
     if (!isNaN(val) && val > 0 && val <= 16) return val;
   }
 
-  // 2. Direct format like "7h30" or "8h15"
+  // 4. Direct format like "7h30" or "8h15"
   const singleHoursMinsMatch = hStr.match(/^(\d{1,2})\s*h\s*(\d{2})$/i);
   if (singleHoursMinsMatch) {
     const h = parseInt(singleHoursMinsMatch[1], 10);
@@ -88,7 +252,7 @@ export function parseWorkedHours(shiftText: string, hoursText?: string): number 
     return Math.round((h + m / 60) * 100) / 100;
   }
 
-  // 3. Time ranges like "9h-12h30 14h-19h" or "8h30/12h30 - 14h/18h"
+  // 5. Time ranges like "9h-12h30 14h-19h" or "8h30/12h30 - 14h/18h"
   const rangeRegex = /(\d{1,2})(?:[h:](\d{2}))?\s*(?:[-/–—]|à)\s*(\d{1,2})(?:[h:](\d{2}))?/gi;
   let totalRangeHours = 0;
   let matchesFound = 0;
@@ -154,7 +318,6 @@ export function getWeekDates(dateStr: string): {
   const [yStr, mStr, dStr] = dateStr.split('-');
   const date = new Date(parseInt(yStr, 10), parseInt(mStr, 10) - 1, parseInt(dStr, 10));
 
-  // In JS getDay() returns 0 for Sunday, 1 for Monday...
   const dayOfWeek = date.getDay();
   const diffToMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
 
@@ -197,8 +360,12 @@ export interface EmployeeBalances {
   // Selected Month
   selectedMonth: string;
   monthHours: number;
-  expectedMonthHours: number;
-  monthBalance: number; // >0: credit (due by employer), <0: debit (due by employee)
+  monthWorkingDays: number;
+  monthFerieDays: number;
+  monthCpDays: number;
+  expectedMonthHours: number; // For Annualisé: (weekdays - feries - cp) * 7h; for 35h: (weeklyQuota * 52 / 12) - (ferie * 7)
+  monthBalance: number; // >0: credit (due by employer), <0: debit (due by employee), 0 for forfait jour
+  monthWorkedDays: number; // For forfait jour
 
   // Target Week (if date provided)
   targetDate?: string;
@@ -213,7 +380,13 @@ export interface EmployeeBalances {
   exerciseHours: number; // Realized hours so far in exercise + initialHoursBalance
   expectedExerciseHoursAtDate: number; // Theoretical trajectory at this month
   exerciseBalance: number; // Realized - Expected at date (>0: credit, <0: debit)
+  projectedExerciseEndHours: number; // Projected total at May 31
+  projectedExerciseEndBalance: number; // Projected end balance (>0: credit, <0: debit)
   exerciseCompletionPercent: number;
+
+  // Forfait Jour specific metrics
+  exerciseWorkedDays: number; // Realized days so far in exercise (presence + AT)
+  forfaitDaysRemaining: number; // forfaitDaysQuota - exerciseWorkedDays
 
   // Leave & RTT Counters (Exercise 1er Juin - 31 Mai)
   paidLeaveTotal: number;
@@ -228,6 +401,7 @@ export interface EmployeeBalances {
   isDebitMonth: boolean;
   isCreditExercise: boolean;
   isDebitExercise: boolean;
+  debtSummaryText: string;
 }
 
 /**
@@ -270,13 +444,30 @@ export function calculateEmployeeBalances(params: {
   targetDate?: string;
   currentSchedule?: EmployeeMonthSchedule | null;
   teamSchedules?: Record<string, EmployeeMonthSchedule>;
+  allMonths?: MonthItem[];
 }): EmployeeBalances {
-  const { employee, selectedMonth, targetDate, currentSchedule, teamSchedules } = params;
+  const { employee, selectedMonth, targetDate, currentSchedule, teamSchedules, allMonths } = params;
   const contractType = employee.contractType || 'HEBDO_35H';
   const weeklyQuota = employee.weeklyHoursQuota ?? 35;
   const yearlyQuota = employee.yearlyHoursQuota ?? 1607;
   const forfaitDaysQuota = employee.forfaitDaysQuota ?? 218;
   const initialHoursBalance = employee.initialHoursBalance ?? 0;
+
+  // Resolve custom month configuration if present
+  let resolvedAllMonths = allMonths;
+  if (!resolvedAllMonths && typeof window !== 'undefined') {
+    try {
+      const cached = localStorage.getItem('planning_cached_config');
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (parsed.allMonths) resolvedAllMonths = parsed.allMonths;
+      }
+    } catch {
+      // ignore
+    }
+  }
+
+  const currentMonthItem = resolvedAllMonths?.find((m) => m.key === selectedMonth) || null;
 
   const exercise = getAnnualExercise(selectedMonth);
 
@@ -292,25 +483,65 @@ export function calculateEmployeeBalances(params: {
     effectiveMonthSched = getScheduleFromCache(employee.name, selectedMonth);
   }
 
-  // Month hours calculation
+  // Calendar info for the selected month (based on working days Mon-Fri minus holidays or custom override)
+  const calInfo = getMonthWorkingCalendar(selectedMonth, effectiveMonthSched?.days, currentMonthItem);
+
+  // Count month hours, CP taken in month, and worked days in month
   let monthHours = 0;
+  let monthCpDays = 0;
+  let monthWorkedDays = 0;
+
   if (effectiveMonthSched?.days) {
     Object.values(effectiveMonthSched.days).forEach((d) => {
-      monthHours += parseWorkedHours(d.shift, d.hours);
+      const cat = categorizeShift(d.shift, d.hours);
+      const sUp = (d.shift || '').trim().toUpperCase();
+
+      // Check if CP
+      if (cat === 'CONGES' || /^(conge|cp|ca)/i.test(sUp)) {
+        monthCpDays++;
+      }
+
+      // Check if worked day for Forfait Jour (presence vacation or AT)
+      if (
+        cat === 'AT' ||
+        sUp === 'AT' ||
+        cat === 'MATIN' ||
+        cat === 'SOIR' ||
+        cat === 'JOURNEE' ||
+        cat === 'HORAIRE' ||
+        cat === 'FORMATION'
+      ) {
+        monthWorkedDays++;
+      }
+
+      monthHours += parseWorkedHours(d.shift, d.hours, contractType);
     });
   } else if (effectiveMonthSched?.totalHours && effectiveMonthSched.totalHours > 0) {
     monthHours = effectiveMonthSched.totalHours;
   }
   monthHours = Math.round(monthHours * 10) / 10;
 
-  // Expected month hours
+  // Expected month hours calculation
+  // Monthly hour base is strictly based on open working days (Mon-Fri, Saturday/Sunday resting)
+  // Minus public holidays and minus taken CP days.
+  // 1 working day = (weeklyQuota / 5) hours (e.g. 35h / 5 = 7h/day)
+  const dailyQuota = weeklyQuota > 0 ? weeklyQuota / 5 : 7;
   let expectedMonthHours = 0;
-  if (contractType === 'HEBDO_35H') {
-    // Standard legal French base (35 * 52 / 12 = 151.67h)
-    expectedMonthHours = Math.round(((weeklyQuota * 52) / 12) * 10) / 10;
-  } else if (contractType === 'ANNUALISE') {
-    expectedMonthHours = Math.round((yearlyQuota / 12) * 10) / 10;
+
+  if (contractType === 'ANNUALISE') {
+    // Annualized employee:
+    // Base is constructed on working days (Mon-Fri) minus Fériés minus CP taken.
+    // E.g. Jan 2027: 21 weekdays - 1 férié = 20 days x 7h = 140h!
+    const effectiveWorkingDays = Math.max(0, calInfo.netWorkingDays - monthCpDays);
+    expectedMonthHours = Math.round(effectiveWorkingDays * dailyQuota * 10) / 10;
+  } else if (contractType === 'HEBDO_35H') {
+    // 35h / week standard:
+    // Base is also calculated on open working days of the month (excluding Sat/Sun and Fériés)
+    // minus any CP taken during the month.
+    const effectiveWorkingDays = Math.max(0, calInfo.netWorkingDays - monthCpDays);
+    expectedMonthHours = Math.round(effectiveWorkingDays * dailyQuota * 10) / 10;
   } else {
+    // Forfait Jour
     expectedMonthHours = 0;
   }
 
@@ -338,7 +569,7 @@ export function calculateEmployeeBalances(params: {
       let schedForDay = dMonth === selectedMonth ? effectiveMonthSched : getScheduleFromCache(employee.name, dMonth);
       const dayData = schedForDay?.days ? schedForDay.days[dKey] : undefined;
       if (dayData) {
-        wHours += parseWorkedHours(dayData.shift, dayData.hours);
+        wHours += parseWorkedHours(dayData.shift, dayData.hours, contractType);
       }
     });
     weekHours = Math.round(wHours * 10) / 10;
@@ -349,49 +580,102 @@ export function calculateEmployeeBalances(params: {
   let totalExerciseHours = initialHoursBalance;
   let leaveShiftsCount = 0;
   let rttShiftsCount = 0;
+  let totalExerciseWorkedDays = 0;
+  let expectedExerciseHoursToDate = 0;
+  let futureProjectedHours = 0;
 
-  exercise.months.forEach((mKey) => {
+  exercise.months.forEach((mKey, idx) => {
+    const isElapsedOrCurrent = idx <= exercise.selectedMonthIndex;
     const sched = mKey === selectedMonth ? effectiveMonthSched : getScheduleFromCache(employee.name, mKey);
+    const mItem = resolvedAllMonths?.find((m) => m.key === mKey) || null;
+    const mCal = getMonthWorkingCalendar(mKey, sched?.days, mItem);
+
+    let mCP = 0;
+    let mHours = 0;
+
     if (sched?.days) {
       Object.values(sched.days).forEach((day) => {
         const cat = categorizeShift(day.shift, day.hours);
-        if (cat === 'CONGES' || (day.shift && /^(conge|cp|ca)/i.test(day.shift.trim()))) {
+        const sUp = (day.shift || '').trim().toUpperCase();
+
+        if (cat === 'CONGES' || /^(conge|cp|ca)/i.test(sUp)) {
           leaveShiftsCount++;
-        } else if (cat === 'RTT' || (day.shift && /^rtt/i.test(day.shift.trim()))) {
+          mCP++;
+        } else if (cat === 'RTT' || /^rtt/i.test(sUp)) {
           rttShiftsCount++;
-        } else {
-          totalExerciseHours += parseWorkedHours(day.shift, day.hours);
         }
+
+        // Count worked days for Forfait Jour (presence vacation or AT)
+        if (
+          cat === 'AT' ||
+          sUp === 'AT' ||
+          cat === 'MATIN' ||
+          cat === 'SOIR' ||
+          cat === 'JOURNEE' ||
+          cat === 'HORAIRE' ||
+          cat === 'FORMATION'
+        ) {
+          totalExerciseWorkedDays++;
+        }
+
+        mHours += parseWorkedHours(day.shift, day.hours, contractType);
       });
     } else if (sched?.totalHours && sched.totalHours > 0) {
-      totalExerciseHours += sched.totalHours;
+      mHours = sched.totalHours;
+    }
+
+    if (isElapsedOrCurrent) {
+      totalExerciseHours += mHours;
+      // Expected theoretical hours for elapsed month based on working days minus CP
+      if (contractType === 'ANNUALISE' || contractType === 'HEBDO_35H') {
+        const effDays = Math.max(0, mCal.netWorkingDays - mCP);
+        expectedExerciseHoursToDate += effDays * dailyQuota;
+      }
+    } else {
+      // Future months in exercise: if already entered in schedule, use mHours, otherwise use standard theoretical base
+      if (mHours > 0) {
+        futureProjectedHours += mHours;
+      } else {
+        futureProjectedHours += mCal.standardBaseHours;
+      }
     }
   });
 
   const exerciseHours = Math.round(totalExerciseHours * 10) / 10;
+  expectedExerciseHoursToDate = Math.round(expectedExerciseHoursToDate * 10) / 10;
 
-  // Expected trajectory at current month of exercise
-  let expectedExerciseHoursAtDate = 0;
-  if (contractType === 'ANNUALISE') {
-    expectedExerciseHoursAtDate = Math.round(((yearlyQuota / 12) * exercise.elapsedMonths) * 10) / 10;
-  } else if (contractType === 'HEBDO_35H') {
-    expectedExerciseHoursAtDate = Math.round((expectedMonthHours * exercise.elapsedMonths) * 10) / 10;
-  }
-
+  // Realized gap at date
   const exerciseBalance =
     contractType === 'FORFAIT_JOUR'
       ? 0
-      : Math.round((exerciseHours - expectedExerciseHoursAtDate) * 10) / 10;
+      : Math.round((exerciseHours - expectedExerciseHoursToDate) * 10) / 10;
 
-  const exerciseCompletionPercent =
-    yearlyQuota > 0 ? Math.min(100, Math.round((exerciseHours / yearlyQuota) * 100)) : 0;
-
-  // 4. Leave & RTT Counters
+  // Projected end of exercise (May 31):
+  // Realized hours + future projected hours - remaining un-taken leave adjustment
   const paidLeaveTotal = employee.paidLeaveTotal ?? 25;
   const initialLeaveTaken = employee.paidLeaveTaken ?? 0;
   const paidLeaveTaken = initialLeaveTaken + leaveShiftsCount;
   const paidLeaveRemaining = Math.max(0, paidLeaveTotal - paidLeaveTaken);
 
+  // Future base adjustment: deduct remaining leave that will be taken before May 31
+  const futureLeaveDeductionHours = paidLeaveRemaining * 7;
+  const projectedExerciseEndHours = Math.round(
+    Math.max(0, totalExerciseHours + Math.max(0, futureProjectedHours - futureLeaveDeductionHours)) * 10
+  ) / 10;
+
+  const projectedExerciseEndBalance =
+    contractType === 'FORFAIT_JOUR'
+      ? 0
+      : Math.round((projectedExerciseEndHours - yearlyQuota) * 10) / 10;
+
+  const exerciseCompletionPercent =
+    yearlyQuota > 0 ? Math.min(100, Math.round((exerciseHours / yearlyQuota) * 100)) : 0;
+
+  // Forfait Jour specific metrics
+  const exerciseWorkedDays = totalExerciseWorkedDays;
+  const forfaitDaysRemaining = Math.max(0, forfaitDaysQuota - exerciseWorkedDays);
+
+  // Leave & RTT Counters
   const rttTotal =
     employee.rttTotal ?? (contractType === 'FORFAIT_JOUR' ? 10 : 0);
   const initialRttTaken = employee.rttTaken ?? 0;
@@ -402,6 +686,18 @@ export function calculateEmployeeBalances(params: {
   let contractLabel = '35h / semaine';
   if (contractType === 'ANNUALISE') contractLabel = `Annualisé (${yearlyQuota}h)`;
   else if (contractType === 'FORFAIT_JOUR') contractLabel = `Forfait Jour (${forfaitDaysQuota}j)`;
+
+  // Summary debt text
+  let debtSummaryText = 'À l’équilibre';
+  if (contractType !== 'FORFAIT_JOUR') {
+    if (exerciseBalance > 0) {
+      debtSummaryText = `Vous lui devez ${Math.abs(exerciseBalance)}h`;
+    } else if (exerciseBalance < 0) {
+      debtSummaryText = `Il vous doit ${Math.abs(exerciseBalance)}h`;
+    }
+  } else {
+    debtSummaryText = `${forfaitDaysRemaining}j à faire`;
+  }
 
   return {
     employeeName: employee.name,
@@ -414,8 +710,12 @@ export function calculateEmployeeBalances(params: {
 
     selectedMonth,
     monthHours,
+    monthWorkingDays: calInfo.netWorkingDays,
+    monthFerieDays: calInfo.ferieCount,
+    monthCpDays,
     expectedMonthHours,
     monthBalance,
+    monthWorkedDays,
 
     targetDate,
     weekNumber,
@@ -426,9 +726,14 @@ export function calculateEmployeeBalances(params: {
 
     exercise,
     exerciseHours,
-    expectedExerciseHoursAtDate,
+    expectedExerciseHoursAtDate: expectedExerciseHoursToDate,
     exerciseBalance,
+    projectedExerciseEndHours,
+    projectedExerciseEndBalance,
     exerciseCompletionPercent,
+
+    exerciseWorkedDays,
+    forfaitDaysRemaining,
 
     paidLeaveTotal,
     paidLeaveTaken,
@@ -441,6 +746,7 @@ export function calculateEmployeeBalances(params: {
     isDebitMonth: monthBalance < 0,
     isCreditExercise: exerciseBalance > 0,
     isDebitExercise: exerciseBalance < 0,
+    debtSummaryText,
   };
 }
 
@@ -462,29 +768,45 @@ export function simulateShiftImpact(params: {
   newExerciseBalance: number;
   newPaidLeaveRemaining: number;
   newRttRemaining: number;
+  newForfaitDaysRemaining: number;
   summaryText: string;
   statusType: 'credit' | 'debit' | 'neutral';
 } {
   const { currentBalances, currentShift, currentHours, newOption } = params;
+  const isForfait = currentBalances.contractType === 'FORFAIT_JOUR';
 
-  const oldHours = parseWorkedHours(currentShift, currentHours);
+  const oldHours = parseWorkedHours(currentShift, currentHours, currentBalances.contractType);
   const newHours =
     newOption.hoursDecimal !== undefined && newOption.hoursDecimal >= 0
       ? newOption.hoursDecimal
-      : parseWorkedHours(newOption.shift, newOption.hours);
+      : parseWorkedHours(newOption.shift, newOption.hours, currentBalances.contractType);
 
   const deltaHours = Math.round((newHours - oldHours) * 10) / 10;
 
+  // Impact on Férié / Expected monthly base
+  const wasOldFerie = categorizeShift(currentShift, currentHours) === 'FERIE';
+  const isNewFerie = newOption.category === 'FERIE' || newOption.shift.toUpperCase() === 'FERIE';
+
+  // Base adjustments if Férié added/removed
+  let expectedBaseAdjustment = 0;
+  if (!wasOldFerie && isNewFerie) expectedBaseAdjustment = -7;
+  else if (wasOldFerie && !isNewFerie) expectedBaseAdjustment = +7;
+
+  const newExpectedMonthHours = Math.max(0, currentBalances.expectedMonthHours + expectedBaseAdjustment);
   const newMonthHours = Math.round((currentBalances.monthHours + deltaHours) * 10) / 10;
-  const newMonthBalance = Math.round((currentBalances.monthBalance + deltaHours) * 10) / 10;
+  const newMonthBalance = isForfait
+    ? 0
+    : Math.round((newMonthHours - newExpectedMonthHours) * 10) / 10;
 
   let newWeekBalance: number | undefined;
-  if (currentBalances.weekBalance !== undefined) {
+  if (currentBalances.weekBalance !== undefined && !isForfait) {
     newWeekBalance = Math.round((currentBalances.weekBalance + deltaHours) * 10) / 10;
   }
 
   const newExerciseHours = Math.round((currentBalances.exerciseHours + deltaHours) * 10) / 10;
-  const newExerciseBalance = Math.round((currentBalances.exerciseBalance + deltaHours) * 10) / 10;
+  const newExerciseBalance = isForfait
+    ? 0
+    : Math.round((currentBalances.exerciseBalance + deltaHours) * 10) / 10;
 
   // Impact on leave
   const wasOldLeave = categorizeShift(currentShift, currentHours) === 'CONGES';
@@ -500,18 +822,56 @@ export function simulateShiftImpact(params: {
   if (!wasOldRtt && isNewRtt) newRttRemaining = Math.max(0, newRttRemaining - 1);
   else if (wasOldRtt && !isNewRtt) newRttRemaining += 1;
 
+  // Impact on Forfait Jour worked days
+  const wasOldWorkedDay =
+    categorizeShift(currentShift, currentHours) === 'AT' ||
+    ['MATIN', 'SOIR', 'JOURNEE', 'HORAIRE', 'FORMATION'].includes(categorizeShift(currentShift, currentHours));
+  const isNewWorkedDay =
+    newOption.category === 'AT' ||
+    newOption.shift.toUpperCase() === 'AT' ||
+    ['MATIN', 'SOIR', 'JOURNEE', 'HORAIRE', 'FORMATION'].includes(newOption.category || '');
+
+  let newForfaitDaysRemaining = currentBalances.forfaitDaysRemaining;
+  if (isForfait) {
+    if (!wasOldWorkedDay && isNewWorkedDay) newForfaitDaysRemaining = Math.max(0, newForfaitDaysRemaining - 1);
+    else if (wasOldWorkedDay && !isNewWorkedDay) newForfaitDaysRemaining += 1;
+  }
+
   let summaryText = '';
   let statusType: 'credit' | 'debit' | 'neutral' = 'neutral';
 
-  if (deltaHours > 0) {
-    statusType = 'credit';
-    summaryText = `+${deltaHours}h sur le planning (vous lui devrez ${Math.abs(newExerciseBalance)}h sur l'année)`;
-  } else if (deltaHours < 0) {
-    statusType = 'debit';
-    summaryText = `${deltaHours}h sur le planning (${newExerciseBalance < 0 ? `il vous devra ${Math.abs(newExerciseBalance)}h sur l'année` : `solde restant dû : +${newExerciseBalance}h`})`;
+  if (isForfait) {
+    if (!wasOldWorkedDay && isNewWorkedDay) {
+      statusType = 'credit';
+      summaryText = `+1 jour travaillé comptabilisé (reste ${newForfaitDaysRemaining}j à faire sur l'exercice)`;
+    } else if (wasOldWorkedDay && !isNewWorkedDay) {
+      statusType = 'debit';
+      summaryText = `-1 jour travaillé (reste ${newForfaitDaysRemaining}j à faire sur l'exercice)`;
+    } else if (isNewRtt) {
+      statusType = 'neutral';
+      summaryText = `RTT posé (reste ${newRttRemaining} RTT)`;
+    } else if (isNewFerie) {
+      statusType = 'neutral';
+      summaryText = `Jour férié chômé (reste ${newForfaitDaysRemaining}j)`;
+    } else {
+      statusType = 'neutral';
+      summaryText = `Reste ${newForfaitDaysRemaining}j à faire sur l'exercice`;
+    }
   } else {
-    statusType = 'neutral';
-    summaryText = `Aucun changement d'heures (solde année : ${newExerciseBalance > 0 ? `+${newExerciseBalance}h` : `${newExerciseBalance}h`})`;
+    // 35h or Annualisé
+    if (isNewFerie) {
+      statusType = 'neutral';
+      summaryText = `Jour Férié chômé (-7h sur la base à faire du mois)`;
+    } else if (deltaHours > 0) {
+      statusType = 'credit';
+      summaryText = `+${deltaHours}h sur le planning (vous lui devrez ${Math.abs(newExerciseBalance)}h sur l'année)`;
+    } else if (deltaHours < 0) {
+      statusType = 'debit';
+      summaryText = `${deltaHours}h sur le planning (${newExerciseBalance < 0 ? `il vous devra ${Math.abs(newExerciseBalance)}h sur l'année` : `solde restant dû : +${newExerciseBalance}h`})`;
+    } else {
+      statusType = 'neutral';
+      summaryText = `Aucun changement d'heures (solde année : ${newExerciseBalance > 0 ? `+${newExerciseBalance}h` : `${newExerciseBalance}h`})`;
+    }
   }
 
   return {
@@ -523,6 +883,7 @@ export function simulateShiftImpact(params: {
     newExerciseBalance,
     newPaidLeaveRemaining,
     newRttRemaining,
+    newForfaitDaysRemaining,
     summaryText,
     statusType,
   };

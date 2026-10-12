@@ -3,7 +3,7 @@ import { Employee, EmployeeMonthSchedule, MonthItem } from '../types/planning';
 import { MonthSelector } from './MonthSelector';
 import { HoursChart, parseHoursFromDay } from './HoursChart';
 import { categorizeShift } from '../config/constants';
-import { calculateEmployeeBalances } from '../services/hoursService';
+import { calculateEmployeeBalances, getMonthWorkingCalendar } from '../services/hoursService';
 import {
   ResponsiveContainer,
   BarChart,
@@ -99,11 +99,17 @@ export const HoursAnalyticsView: React.FC<HoursAnalyticsViewProps> = ({
   // Sub-view in Team mode: 'compare' | 'weekly' | 'pie'
   const [teamChartView, setTeamChartView] = useState<'compare' | 'weekly' | 'pie'>('compare');
 
-  // Month label
+  // Month label & working calendar info
   const currentMonthItem = useMemo(() => {
     return allMonths.find((m) => m.key === selectedMonth);
   }, [allMonths, selectedMonth]);
   const monthLabel = currentMonthItem?.label || selectedMonth;
+
+  // Monthly working calendar base (Monday-Friday working days, weekends rest, holidays deducted)
+  const monthWorkingCal = useMemo(() => {
+    return getMonthWorkingCalendar(selectedMonth, undefined, currentMonthItem);
+  }, [selectedMonth, currentMonthItem]);
+  const standardMonthBaseHours = monthWorkingCal.standardBaseHours;
 
   // Find employee schedule safely
   const getEmployeeSchedule = (empName: string): EmployeeMonthSchedule | null => {
@@ -159,6 +165,7 @@ export const HoursAnalyticsView: React.FC<HoursAnalyticsViewProps> = ({
         selectedMonth,
         currentSchedule: schedule,
         teamSchedules,
+        allMonths,
       });
 
       return {
@@ -173,7 +180,7 @@ export const HoursAnalyticsView: React.FC<HoursAnalyticsViewProps> = ({
         balances,
       };
     });
-  }, [employees, teamSchedules, mySchedule, currentEmployee, selectedMonth]);
+  }, [employees, teamSchedules, mySchedule, currentEmployee, selectedMonth, allMonths]);
 
   // Aggregate Team Totals
   const teamAggregate = useMemo(() => {
@@ -354,7 +361,7 @@ export const HoursAnalyticsView: React.FC<HoursAnalyticsViewProps> = ({
                 <span className="text-sm font-bold text-blue-600 ml-0.5">h</span>
               </div>
               <p className="text-[10px] text-slate-500 mt-0.5">
-                Base contractuelle ~151.7h
+                Base du mois : {standardMonthBaseHours}h ({monthWorkingCal.netWorkingDays}j ouvrés)
               </p>
             </div>
 
@@ -448,7 +455,9 @@ export const HoursAnalyticsView: React.FC<HoursAnalyticsViewProps> = ({
               <div className="space-y-3">
                 <div className="flex items-center justify-between text-xs text-slate-500">
                   <span>Heures totales travaillées par employé ({monthLabel})</span>
-                  <span className="text-emerald-700 font-medium">Ligne de repère : 151.7h</span>
+                  <span className="text-emerald-700 font-medium">
+                    Ligne de repère : {standardMonthBaseHours}h ({monthWorkingCal.netWorkingDays}j ouvrés)
+                  </span>
                 </div>
 
                 <div className="h-64 sm:h-72 w-full">
@@ -481,7 +490,6 @@ export const HoursAnalyticsView: React.FC<HoursAnalyticsViewProps> = ({
                             teamAggregate.totalHours > 0
                               ? Math.round((data.totalHours / teamAggregate.totalHours) * 100)
                               : 0;
-                          const diff = Math.round((data.totalHours - 151.67) * 10) / 10;
                           return (
                             <div className="bg-slate-900 text-white text-xs rounded-xl p-3 shadow-lg border border-slate-800 space-y-1.5 min-w-[160px]">
                               <div className="flex items-center justify-between gap-2 border-b border-slate-800 pb-1">
@@ -500,20 +508,41 @@ export const HoursAnalyticsView: React.FC<HoursAnalyticsViewProps> = ({
                                 <span>Part équipe :</span>
                                 <span>{pct}%</span>
                               </div>
-                              <div className="flex items-center justify-between text-slate-300 text-[11px]">
-                                <span>Jours travaillés :</span>
-                                <span>{data.workedDays} j</span>
-                              </div>
-                              <div className="flex items-center justify-between text-[11px] pt-1 border-t border-slate-800">
-                                <span className="text-slate-400">Écart base 151.7h :</span>
-                                <span
-                                  className={`font-semibold tabular-nums ${
-                                    diff >= 0 ? 'text-emerald-400' : 'text-amber-400'
-                                  }`}
-                                >
-                                  {diff > 0 ? `+${diff}h` : `${diff}h`}
-                                </span>
-                              </div>
+                              {data.balances?.contractType === 'FORFAIT_JOUR' ? (
+                                <>
+                                  <div className="flex items-center justify-between text-slate-300 text-[11px]">
+                                    <span>Jours faits :</span>
+                                    <span>{data.balances.exerciseWorkedDays} / {data.balances.forfaitDaysQuota} j</span>
+                                  </div>
+                                  <div className="flex items-center justify-between text-sky-400 text-[11px]">
+                                    <span>Reste à faire :</span>
+                                    <span>{data.balances.forfaitDaysRemaining} j</span>
+                                  </div>
+                                </>
+                              ) : (
+                                <>
+                                  <div className="flex items-center justify-between text-[11px] pt-1 border-t border-slate-800">
+                                    <span className="text-slate-400">Écart mois ({data.balances?.expectedMonthHours}h) :</span>
+                                    <span
+                                      className={`font-semibold tabular-nums ${
+                                        (data.balances?.monthBalance ?? 0) >= 0 ? 'text-emerald-400' : 'text-amber-400'
+                                      }`}
+                                    >
+                                      {(data.balances?.monthBalance ?? 0) > 0 ? `+${data.balances?.monthBalance}h` : `${data.balances?.monthBalance}h`}
+                                    </span>
+                                  </div>
+                                  <div className="flex items-center justify-between text-[11px]">
+                                    <span className="text-slate-400">Écart année :</span>
+                                    <span
+                                      className={`font-semibold tabular-nums ${
+                                        (data.balances?.exerciseBalance ?? 0) >= 0 ? 'text-sky-400' : 'text-amber-400'
+                                      }`}
+                                    >
+                                      {(data.balances?.exerciseBalance ?? 0) > 0 ? `+${data.balances?.exerciseBalance}h` : `${data.balances?.exerciseBalance}h`}
+                                    </span>
+                                  </div>
+                                </>
+                              )}
                               <div className="text-[10px] text-emerald-400 pt-1 text-center font-medium">
                                 Touchez pour voir le détail
                               </div>
@@ -522,11 +551,11 @@ export const HoursAnalyticsView: React.FC<HoursAnalyticsViewProps> = ({
                         }}
                       />
                       <ReferenceLine
-                        y={151.67}
+                        y={standardMonthBaseHours}
                         stroke="#059669"
                         strokeDasharray="4 4"
                         label={{
-                          value: '151.7h Base légale',
+                          value: `${standardMonthBaseHours}h (Base du mois)`,
                           position: 'top',
                           fill: '#059669',
                           fontSize: 10,
@@ -547,7 +576,7 @@ export const HoursAnalyticsView: React.FC<HoursAnalyticsViewProps> = ({
                         {teamEmployeesStats.map((entry, index) => (
                           <Cell
                             key={`emp-cell-${index}`}
-                            fill={entry.totalHours >= 151.67 ? '#059669' : '#0284c7'}
+                            fill={entry.totalHours >= standardMonthBaseHours ? '#059669' : '#0284c7'}
                           />
                         ))}
                       </Bar>
@@ -734,7 +763,6 @@ export const HoursAnalyticsView: React.FC<HoursAnalyticsViewProps> = ({
 
             <div className="divide-y divide-slate-100">
               {teamEmployeesStats.map((st) => {
-                const diff = Math.round((st.totalHours - 151.67) * 10) / 10;
                 return (
                   <div
                     key={st.name}
@@ -762,9 +790,15 @@ export const HoursAnalyticsView: React.FC<HoursAnalyticsViewProps> = ({
                         <div className="flex items-center gap-1.5 text-xs text-slate-500 mt-0.5 flex-wrap">
                           <span className="font-semibold text-slate-700">{st.balances.contractLabel}</span>
                           <span aria-hidden="true">·</span>
-                          <span className={st.balances.exerciseBalance > 0 ? 'text-sky-700 font-bold' : st.balances.exerciseBalance < 0 ? 'text-amber-700 font-bold' : 'text-slate-600'}>
-                            Année : {st.balances.exerciseBalance > 0 ? `+${st.balances.exerciseBalance}h` : `${st.balances.exerciseBalance}h`}
-                          </span>
+                          {st.balances.contractType === 'FORFAIT_JOUR' ? (
+                            <span className="text-sky-700 font-bold">
+                              Reste : {st.balances.forfaitDaysRemaining}j à faire
+                            </span>
+                          ) : (
+                            <span className={st.balances.exerciseBalance > 0 ? 'text-sky-700 font-bold' : st.balances.exerciseBalance < 0 ? 'text-amber-700 font-bold' : 'text-slate-600'}>
+                              Année : {st.balances.exerciseBalance > 0 ? `+${st.balances.exerciseBalance}h (dû salarié)` : st.balances.exerciseBalance < 0 ? `${st.balances.exerciseBalance}h (dû magasin)` : '0h (équilibré)'}
+                            </span>
+                          )}
                           <span aria-hidden="true">·</span>
                           <span className="text-amber-700 font-medium">CP : {st.balances.paidLeaveRemaining}j</span>
                           {st.balances.rttTotal > 0 && (
@@ -785,12 +819,16 @@ export const HoursAnalyticsView: React.FC<HoursAnalyticsViewProps> = ({
                         </div>
                         <div
                           className={`text-[10px] font-semibold tabular-nums ${
-                            st.balances.monthBalance >= 0 ? 'text-emerald-700' : 'text-amber-700'
+                            st.balances.contractType === 'FORFAIT_JOUR'
+                              ? 'text-sky-700 font-bold'
+                              : st.balances.monthBalance >= 0
+                              ? 'text-emerald-700'
+                              : 'text-amber-700'
                           }`}
                         >
                           {st.balances.contractType === 'FORFAIT_JOUR'
-                            ? 'Forfait Jour'
-                            : `${st.balances.monthBalance > 0 ? `+${st.balances.monthBalance}h` : `${st.balances.monthBalance}h`} / ${st.balances.expectedMonthHours}h`}
+                            ? `${st.balances.exerciseWorkedDays}/${st.balances.forfaitDaysQuota}j faits`
+                            : `${st.balances.monthBalance > 0 ? `+${st.balances.monthBalance}h` : `${st.balances.monthBalance}h`} (base ${st.balances.expectedMonthHours}h)`}
                         </div>
                       </div>
 

@@ -295,7 +295,7 @@ export const HoursChart: React.FC<HoursChartProps> = ({
     });
   }, [employeeName, schedule, selectedMonth]);
 
-  // Standard monthly hours (35h / week = ~151.67h or quota)
+  // Monthly balance relative to dynamic working days base
   const differenceWithStandard = employeeBalances.monthBalance;
 
   // Average weekly hours
@@ -364,48 +364,132 @@ export const HoursChart: React.FC<HoursChartProps> = ({
         {/* Highlight Stats Row */}
         {!isCollapsed && (
           <div className="grid grid-cols-3 gap-2 mt-3.5 pt-3 border-t border-slate-200/60 text-center">
-            <div className="bg-white/80 rounded-lg p-2 border border-slate-200/60 shadow-2xs">
-              <span className="text-[10px] font-medium text-slate-500 uppercase tracking-wider block">
-                Moy. Hebdo
-              </span>
-              <span className="text-xs sm:text-sm font-bold text-slate-800 tabular-nums">
-                {weeklyAverage > 0 ? `${weeklyAverage}h` : '—'}
-              </span>
-            </div>
+            {employeeBalances.contractType === 'FORFAIT_JOUR' ? (
+              <>
+                <div className="bg-white/80 rounded-lg p-2 border border-slate-200/60 shadow-2xs">
+                  <span className="text-[10px] font-medium text-slate-500 uppercase tracking-wider block">
+                    Jours Faits
+                  </span>
+                  <span className="text-xs sm:text-sm font-bold text-slate-800 tabular-nums">
+                    {employeeBalances.exerciseWorkedDays} / {employeeBalances.forfaitDaysQuota} j
+                  </span>
+                </div>
 
-            <div className="bg-white/80 rounded-lg p-2 border border-slate-200/60 shadow-2xs">
-              <span className="text-[10px] font-medium text-slate-500 uppercase tracking-wider block">
-                Écart Mois ({employeeBalances.expectedMonthHours}h)
-              </span>
-              <span
-                className={`text-xs sm:text-sm font-bold tabular-nums ${
-                  differenceWithStandard >= 0 ? 'text-emerald-700' : 'text-amber-700'
-                }`}
-              >
-                {differenceWithStandard > 0 ? `+${differenceWithStandard}h` : `${differenceWithStandard}h`}
-              </span>
-            </div>
+                <div className="bg-white/80 rounded-lg p-2 border border-slate-200/60 shadow-2xs">
+                  <span className="text-[10px] font-medium text-slate-500 uppercase tracking-wider block">
+                    Reste à faire
+                  </span>
+                  <span className="text-xs sm:text-sm font-bold text-sky-700 tabular-nums">
+                    {employeeBalances.forfaitDaysRemaining} j
+                  </span>
+                </div>
 
-            <div className="bg-white/80 rounded-lg p-2 border border-slate-200/60 shadow-2xs">
-              <span className="text-[10px] font-medium text-slate-500 uppercase tracking-wider block">
-                Écart Année (1er Juin - 31 Mai)
-              </span>
-              <span
-                className={`text-xs sm:text-sm font-bold tabular-nums ${
-                  employeeBalances.exerciseBalance > 0
-                    ? 'text-sky-700'
-                    : employeeBalances.exerciseBalance < 0
-                    ? 'text-amber-700'
-                    : 'text-emerald-700'
-                }`}
-              >
-                {employeeBalances.contractType === 'FORFAIT_JOUR'
-                  ? 'Forfait Jour'
-                  : employeeBalances.exerciseBalance > 0
-                  ? `+${employeeBalances.exerciseBalance}h`
-                  : `${employeeBalances.exerciseBalance}h`}
-              </span>
-            </div>
+                <div className="bg-white/80 rounded-lg p-2 border border-slate-200/60 shadow-2xs">
+                  <span className="text-[10px] font-medium text-slate-500 uppercase tracking-wider block">
+                    RTT Restants
+                  </span>
+                  <span className="text-xs sm:text-sm font-bold text-teal-700 tabular-nums">
+                    {employeeBalances.rttRemaining} j
+                  </span>
+                </div>
+              </>
+            ) : employeeBalances.contractType === 'ANNUALISE' ? (
+              <>
+                <div className="bg-white/80 rounded-lg p-2 border border-slate-200/60 shadow-2xs">
+                  <span className="text-[10px] font-medium text-slate-500 uppercase tracking-wider block">
+                    Écart Mois ({employeeBalances.expectedMonthHours}h)
+                  </span>
+                  <span
+                    className={`text-xs sm:text-sm font-bold tabular-nums ${
+                      differenceWithStandard >= 0 ? 'text-emerald-700' : 'text-amber-700'
+                    }`}
+                  >
+                    {differenceWithStandard > 0 ? `+${differenceWithStandard}h` : `${differenceWithStandard}h`}
+                  </span>
+                </div>
+
+                <div className="bg-white/80 rounded-lg p-2 border border-slate-200/60 shadow-2xs">
+                  <span className="text-[10px] font-medium text-slate-500 uppercase tracking-wider block">
+                    Écart Année
+                  </span>
+                  <span
+                    className={`text-xs sm:text-sm font-bold tabular-nums ${
+                      employeeBalances.exerciseBalance > 0
+                        ? 'text-sky-700'
+                        : employeeBalances.exerciseBalance < 0
+                        ? 'text-amber-700'
+                        : 'text-emerald-700'
+                    }`}
+                  >
+                    {employeeBalances.exerciseBalance > 0
+                      ? `+${employeeBalances.exerciseBalance}h`
+                      : `${employeeBalances.exerciseBalance}h`}
+                  </span>
+                </div>
+
+                <div className="bg-white/80 rounded-lg p-2 border border-slate-200/60 shadow-2xs">
+                  <span className="text-[10px] font-medium text-slate-500 uppercase tracking-wider block">
+                    Fin d'exercice (31 Mai)
+                  </span>
+                  <span
+                    className={`text-xs sm:text-sm font-bold tabular-nums ${
+                      employeeBalances.projectedExerciseEndBalance > 0
+                        ? 'text-sky-700'
+                        : employeeBalances.projectedExerciseEndBalance < 0
+                        ? 'text-amber-700'
+                        : 'text-emerald-700'
+                    }`}
+                  >
+                    {employeeBalances.projectedExerciseEndBalance > 0
+                      ? `+${employeeBalances.projectedExerciseEndBalance}h`
+                      : `${employeeBalances.projectedExerciseEndBalance}h`}
+                  </span>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="bg-white/80 rounded-lg p-2 border border-slate-200/60 shadow-2xs">
+                  <span className="text-[10px] font-medium text-slate-500 uppercase tracking-wider block">
+                    Moy. Hebdo
+                  </span>
+                  <span className="text-xs sm:text-sm font-bold text-slate-800 tabular-nums">
+                    {weeklyAverage > 0 ? `${weeklyAverage}h` : '—'}
+                  </span>
+                </div>
+
+                <div className="bg-white/80 rounded-lg p-2 border border-slate-200/60 shadow-2xs">
+                  <span className="text-[10px] font-medium text-slate-500 uppercase tracking-wider block">
+                    Écart Mois ({employeeBalances.expectedMonthHours}h)
+                  </span>
+                  <span
+                    className={`text-xs sm:text-sm font-bold tabular-nums ${
+                      differenceWithStandard >= 0 ? 'text-emerald-700' : 'text-amber-700'
+                    }`}
+                  >
+                    {differenceWithStandard > 0 ? `+${differenceWithStandard}h` : `${differenceWithStandard}h`}
+                  </span>
+                </div>
+
+                <div className="bg-white/80 rounded-lg p-2 border border-slate-200/60 shadow-2xs">
+                  <span className="text-[10px] font-medium text-slate-500 uppercase tracking-wider block">
+                    Écart Année
+                  </span>
+                  <span
+                    className={`text-xs sm:text-sm font-bold tabular-nums ${
+                      employeeBalances.exerciseBalance > 0
+                        ? 'text-sky-700'
+                        : employeeBalances.exerciseBalance < 0
+                        ? 'text-amber-700'
+                        : 'text-emerald-700'
+                    }`}
+                  >
+                    {employeeBalances.exerciseBalance > 0
+                      ? `+${employeeBalances.exerciseBalance}h`
+                      : `${employeeBalances.exerciseBalance}h`}
+                  </span>
+                </div>
+              </>
+            )}
           </div>
         )}
       </div>
@@ -509,21 +593,28 @@ export const HoursChart: React.FC<HoursChartProps> = ({
                               <span>Total cumulé :</span>
                               <span className="font-bold tabular-nums">{data.cumulativeHours} h</span>
                             </div>
-                            <div className="flex items-center justify-between gap-4 text-slate-400 text-[10px] pt-0.5 border-t border-slate-800">
-                              <span>Jours travaillés :</span>
-                              <span>{data.workedDays} j</span>
-                            </div>
+                            {employeeBalances.contractType === 'FORFAIT_JOUR' ? (
+                              <div className="flex items-center justify-between gap-4 text-slate-400 text-[10px] pt-0.5 border-t border-slate-800">
+                                <span>Jours réalisés :</span>
+                                <span>{data.workedDays} j</span>
+                              </div>
+                            ) : (
+                              <div className="flex items-center justify-between gap-4 text-slate-400 text-[10px] pt-0.5 border-t border-slate-800">
+                                <span>Quota hebdo :</span>
+                                <span>{employeeBalances.weeklyQuota} h</span>
+                              </div>
+                            )}
                           </div>
                         );
                       }}
                     />
                     <ReferenceLine
                       yAxisId="left"
-                      y={35}
+                      y={employeeBalances.weeklyQuota || 35}
                       stroke="#10b981"
                       strokeDasharray="4 4"
                       label={{
-                        value: '35h (Base)',
+                        value: `${employeeBalances.weeklyQuota || 35}h (Base hebdo)`,
                         position: 'top',
                         fill: '#059669',
                         fontSize: 10,
@@ -541,7 +632,7 @@ export const HoursChart: React.FC<HoursChartProps> = ({
                       {weeklyData.map((entry, index) => (
                         <Cell
                           key={`cell-${index}`}
-                          fill={entry.workedHours >= 35 ? '#059669' : '#0d9488'}
+                          fill={entry.workedHours >= (employeeBalances.weeklyQuota || 35) ? '#059669' : '#0d9488'}
                         />
                       ))}
                     </Bar>

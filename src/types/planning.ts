@@ -36,6 +36,8 @@ export type ShiftCategory =
   | 'CONGES'
   | 'RTT'
   | 'FORMATION'
+  | 'FERIE'
+  | 'AT'
   | 'AUTRE'
   | (string & {});
 
@@ -63,6 +65,8 @@ export interface MonthItem {
   key: string; // "2026-09"
   tab: string; // "SEPTEMBRE 26"
   label: string; // "Septembre 2026"
+  customWorkingDays?: number; // Surcharge manuelle du nombre de jours ouvrés (par défaut calcul auto sur lun-ven hors fériés)
+  customBaseHours?: number; // Surcharge manuelle des heures de base du mois
 }
 
 export interface ConfigData {

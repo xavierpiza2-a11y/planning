@@ -11,7 +11,7 @@ export default defineConfig(() => {
       tailwindcss(),
       VitePWA({
         registerType: 'autoUpdate',
-        includeAssets: ['icon.svg', 'icon-192.png', 'icon-512.png', 'OneSignalSDKWorker.js'],
+        includeAssets: ['icon.svg', 'icon-192.png', 'icon-512.png'],
         manifest: {
           id: '/',
           name: 'Planning Pro · Équipe',

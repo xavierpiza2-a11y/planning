@@ -30,12 +30,8 @@ import {
   resetToCleanStore,
   getStoredDayNotes,
 } from '../services/api';
-import {
-  checkPushPermission,
-  requestPushPermission,
-  testPushNotification,
-} from '../services/onesignal';
 import { exportTeamPlanningToPDF } from '../services/pdfExport';
+import { calculateEmployeeBalances, simulateShiftImpact, getMonthWorkingCalendar } from '../services/hoursService';
 import { AdminExcelSection } from './AdminExcelSection';
 import { AdminTableau2Section } from './AdminTableau2Section';
 import { AdminDatabaseSection } from './AdminDatabaseSection';
@@ -43,6 +39,7 @@ import {
   ShieldCheck,
   ShieldAlert,
   KeyRound,
+  Scale,
   Users,
   Calendar,
   Settings,
@@ -69,7 +66,6 @@ import {
   Sparkles,
   AlertTriangle,
   X,
-  Bell,
   CalendarDays,
   CheckCircle2,
   Info,
@@ -238,14 +234,6 @@ export const AdminView: React.FC<AdminViewProps> = ({
   const [tokenInput, setTokenInput] = useState(getApiToken());
   const [connectionSuccess, setConnectionSuccess] = useState(false);
 
-  // Push Notification state
-  const [pushStatus, setPushStatus] = useState<string>('default');
-  const [isTestingPush, setIsTestingPush] = useState(false);
-  const [pushTestFeedback, setPushTestFeedback] = useState<{
-    success: boolean;
-    message: string;
-  } | null>(null);
-
   // Team management state
   const [teamList, setTeamList] = useState<Employee[]>(employees);
   const [isSavingTeam, setIsSavingTeam] = useState(false);
@@ -297,6 +285,8 @@ export const AdminView: React.FC<AdminViewProps> = ({
   const [editMonthKey, setEditMonthKey] = useState<string>('');
   const [editMonthLabel, setEditMonthLabel] = useState<string>('');
   const [editMonthTab, setEditMonthTab] = useState<string>('');
+  const [editMonthCustomWorkingDays, setEditMonthCustomWorkingDays] = useState<string>('');
+  const [editMonthCustomBaseHours, setEditMonthCustomBaseHours] = useState<string>('');
 
   // Month deletion confirmation modal
   const [monthToDelete, setMonthToDelete] = useState<MonthItem | null>(null);
@@ -322,7 +312,6 @@ export const AdminView: React.FC<AdminViewProps> = ({
           setTableau2Options(shifts);
         }
       });
-      checkPushPermission().then(setPushStatus);
     }
   }, [isAuthenticated]);
 
@@ -427,33 +416,6 @@ export const AdminView: React.FC<AdminViewProps> = ({
     setConnectionSuccess(true);
     showToast('success', 'Jeton d’accès enregistré sur la base de données !');
     setTimeout(() => setConnectionSuccess(false), 3000);
-  };
-
-  // Push notification testing handler
-  const handleTestPush = async () => {
-    setIsTestingPush(true);
-    setPushTestFeedback(null);
-    try {
-      const res = await testPushNotification();
-      setPushTestFeedback(res);
-      const perm = await checkPushPermission();
-      setPushStatus(perm);
-    } catch (err: any) {
-      setPushTestFeedback({
-        success: false,
-        message: err?.message || 'Erreur lors du test de notification.',
-      });
-    } finally {
-      setIsTestingPush(false);
-    }
-  };
-
-  const handleRequestPushFromAdmin = async () => {
-    const granted = await requestPushPermission();
-    setPushStatus(granted ? 'granted' : 'denied');
-    if (granted) {
-      handleTestPush();
-    }
   };
 
   // --- TEAM MANAGEMENT HANDLERS ---
@@ -719,6 +681,12 @@ export const AdminView: React.FC<AdminViewProps> = ({
     setEditMonthKey(m.key);
     setEditMonthLabel(m.label);
     setEditMonthTab(m.tab);
+    setEditMonthCustomWorkingDays(
+      typeof m.customWorkingDays === 'number' ? String(m.customWorkingDays) : ''
+    );
+    setEditMonthCustomBaseHours(
+      typeof m.customBaseHours === 'number' ? String(m.customBaseHours) : ''
+    );
   };
 
   // Save Edit Month
@@ -741,8 +709,24 @@ export const AdminView: React.FC<AdminViewProps> = ({
       return;
     }
 
-    const updatedMonths = monthsList.map((m) =>
-      m.key === oldKey ? { key: newKey, label: newLabel, tab: newTab } : m
+    const parsedWorkingDays = editMonthCustomWorkingDays.trim() !== ''
+      ? Math.max(0, parseInt(editMonthCustomWorkingDays.trim(), 10))
+      : undefined;
+
+    const parsedBaseHours = editMonthCustomBaseHours.trim() !== ''
+      ? Math.max(0, parseFloat(editMonthCustomBaseHours.trim().replace(',', '.')))
+      : undefined;
+
+    const updatedMonths: MonthItem[] = monthsList.map((m) =>
+      m.key === oldKey
+        ? {
+            key: newKey,
+            label: newLabel,
+            tab: newTab,
+            customWorkingDays: !isNaN(parsedWorkingDays as number) ? parsedWorkingDays : undefined,
+            customBaseHours: !isNaN(parsedBaseHours as number) ? parsedBaseHours : undefined,
+          }
+        : m
     );
 
     let updatedVisible = selectedVisibleMonths;
@@ -1247,6 +1231,52 @@ export const AdminView: React.FC<AdminViewProps> = ({
                 })}
               </div>
             </div>
+
+            {/* Real-time RH situation pill */}
+            {(() => {
+              const currentDirectEmployeeObj =
+                employees.find((e) => e.name.toLowerCase() === shiftEditEmployee.toLowerCase()) ||
+                employees[0];
+              if (!currentDirectEmployeeObj) return null;
+
+              const currentDirectBalances = calculateEmployeeBalances({
+                employee: currentDirectEmployeeObj,
+                selectedMonth: shiftEditMonth,
+                targetDate: shiftEditDate,
+              });
+
+              const currentDirectSelectedOpt = tableau2Options.find((o) => o.id === shiftEditOptionId);
+              if (!currentDirectSelectedOpt) return null;
+
+              const directShiftImpact = simulateShiftImpact({
+                currentBalances: currentDirectBalances,
+                targetDate: shiftEditDate,
+                currentShift: '',
+                newOption: currentDirectSelectedOpt,
+              });
+
+              return (
+                <div className="p-3.5 rounded-2xl bg-linear-to-r from-slate-900 to-slate-850 text-white text-xs space-y-2 border border-slate-800 shadow-sm">
+                  <div className="flex items-center justify-between gap-2 flex-wrap">
+                    <div className="flex items-center gap-2">
+                      <Scale className="w-3.5 h-3.5 text-emerald-400" />
+                      <span className="font-bold text-white">
+                        Impact RH : {currentDirectEmployeeObj.name}
+                      </span>
+                      <span className="text-[10px] font-semibold px-2 py-0.5 rounded-md bg-white/10 text-emerald-300">
+                        {currentDirectBalances.contractLabel}
+                      </span>
+                    </div>
+                    <span className="text-[10px] text-slate-400 font-mono">
+                      Exercice : {currentDirectBalances.exercise.label}
+                    </span>
+                  </div>
+                  <div className="text-[11px] text-slate-200 bg-white/5 p-2 rounded-xl border border-white/5 font-medium">
+                    {directShiftImpact.summaryText}
+                  </div>
+                </div>
+              );
+            })()}
 
             {/* Status Feedback */}
             {shiftUpdateStatus && (
@@ -2011,10 +2041,18 @@ export const AdminView: React.FC<AdminViewProps> = ({
                         <p className="text-[10px] text-slate-500 font-mono mt-0.5">
                           Onglet : <span className="font-semibold">{m.tab}</span>
                         </p>
-                        <p className="text-[10px] text-emerald-700 mt-0.5 flex items-center gap-1">
-                          <CalendarDays className="w-3 h-3 shrink-0" />
-                          <span>{calDays.length} jours de calendrier</span>
-                        </p>
+                        {(() => {
+                          const mCal = getMonthWorkingCalendar(m.key, undefined, m);
+                          return (
+                            <p className="text-[10px] text-emerald-700 mt-0.5 flex items-center gap-1">
+                              <CalendarDays className="w-3 h-3 shrink-0" />
+                              <span>
+                                {mCal.netWorkingDays}j ouvrés ({mCal.standardBaseHours}h)
+                                {mCal.isCustomized ? ' · modulé' : ''}
+                              </span>
+                            </p>
+                          );
+                        })()}
                       </div>
 
                       {/* Visible checkbox toggle */}
@@ -2197,104 +2235,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
             </form>
           </div>
 
-          {/* Section 1: Centre de Contrôle des Notifications Push */}
-          <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-xs space-y-4">
-            <div className="flex items-start justify-between gap-3">
-              <div className="flex items-center gap-2.5">
-                <div className="w-9 h-9 rounded-xl bg-emerald-100 text-emerald-800 flex items-center justify-center font-bold">
-                  <Bell className="w-5 h-5" />
-                </div>
-                <div>
-                  <h3 className="text-sm font-bold text-slate-900">
-                    Contrôle des Notifications Push
-                  </h3>
-                  <p className="text-xs text-slate-500">
-                    Alertes en direct lors des modifications de planning pour les salariés et responsables.
-                  </p>
-                </div>
-              </div>
-
-              {/* Status Pill */}
-              <span
-                className={`text-xs font-bold px-3 py-1 rounded-full border flex items-center gap-1.5 ${
-                  pushStatus === 'granted'
-                    ? 'bg-emerald-50 text-emerald-900 border-emerald-300'
-                    : pushStatus === 'denied'
-                    ? 'bg-rose-50 text-rose-900 border-rose-300'
-                    : 'bg-amber-50 text-amber-900 border-amber-300'
-                }`}
-              >
-                <span
-                  className={`w-2 h-2 rounded-full ${
-                    pushStatus === 'granted'
-                      ? 'bg-emerald-600'
-                      : pushStatus === 'denied'
-                      ? 'bg-rose-600'
-                      : 'bg-amber-600'
-                  }`}
-                />
-                <span>
-                  {pushStatus === 'granted'
-                    ? 'Activées'
-                    : pushStatus === 'denied'
-                    ? 'Bloquées par le navigateur'
-                    : 'En attente d’autorisation'}
-                </span>
-              </span>
-            </div>
-
-            <div className="bg-slate-50 rounded-xl p-3 border border-slate-200 text-xs text-slate-600 space-y-1">
-              <p>
-                <strong>Fonctionnement :</strong> Les notifications sont distribuées via le Service Worker sécurisé (compatibilité iPhone/iOS en PWA, Android, tablettes et PC).
-              </p>
-              {pushStatus === 'denied' && (
-                <p className="text-rose-700 font-semibold pt-1">
-                  ⚠️ Le navigateur a bloqué les notifications. Pour les réactiver, cliquez sur le cadenas ou l'icône de réglages à gauche de la barre d'adresse de votre navigateur et autorisez les notifications.
-                </p>
-              )}
-            </div>
-
-            {pushTestFeedback && (
-              <div
-                className={`p-3 rounded-xl text-xs font-semibold flex items-center gap-2 ${
-                  pushTestFeedback.success
-                    ? 'bg-emerald-50 text-emerald-900 border border-emerald-200'
-                    : 'bg-rose-50 text-rose-900 border border-rose-200'
-                }`}
-              >
-                {pushTestFeedback.success ? (
-                  <Check className="w-4 h-4 text-emerald-600 shrink-0" />
-                ) : (
-                  <ShieldAlert className="w-4 h-4 text-rose-600 shrink-0" />
-                )}
-                <span>{pushTestFeedback.message}</span>
-              </div>
-            )}
-
-            <div className="flex items-center gap-2 pt-1 flex-wrap">
-              <button
-                type="button"
-                onClick={handleTestPush}
-                disabled={isTestingPush}
-                className="flex items-center gap-2 px-4 py-2 text-xs font-bold text-white bg-emerald-700 hover:bg-emerald-800 disabled:opacity-50 rounded-xl transition-colors shadow-2xs"
-              >
-                <Bell className={`w-3.5 h-3.5 ${isTestingPush ? 'animate-bounce' : ''}`} />
-                <span>{isTestingPush ? 'Envoi du test...' : 'Envoyer une notification de test'}</span>
-              </button>
-
-              {pushStatus !== 'granted' && (
-                <button
-                  type="button"
-                  onClick={handleRequestPushFromAdmin}
-                  className="flex items-center gap-2 px-4 py-2 text-xs font-semibold text-emerald-900 bg-emerald-100 hover:bg-emerald-200 rounded-xl transition-colors"
-                >
-                  <span>Demander l'autorisation push</span>
-                </button>
-              )}
-            </div>
-          </div>
-
-          {/* Section 1: Modifier le Code PIN Administrateur */}
+          {/* Section: Modifier le Code PIN Administrateur */}
           <form
             onSubmit={handleChangeAdminPin}
             className="bg-white rounded-2xl border border-slate-200 p-5 shadow-xs space-y-4"
@@ -2534,6 +2475,61 @@ export const AdminView: React.FC<AdminViewProps> = ({
                   onChange={(e) => setEditMonthTab(e.target.value.toUpperCase())}
                   className="w-full text-xs font-semibold px-3 py-2 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-600 uppercase"
                 />
+              </div>
+
+              {/* Working days & Base hours modulation */}
+              <div className="bg-slate-50 p-3 rounded-xl border border-slate-200/80 space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                    <CalendarDays className="w-3.5 h-3.5 text-emerald-600" />
+                    <span>Base horaire & Jours ouvrés du mois</span>
+                  </span>
+                  <span className="text-[10px] text-slate-500">
+                    Samedi & Dimanche chômés
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2.5">
+                  <div>
+                    <label className="block text-[11px] font-semibold text-slate-600 mb-1">
+                      Jours ouvrés (Mon-Fri) :
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      max="31"
+                      placeholder={`Auto : ${getMonthWorkingCalendar(editMonthKey).netWorkingDays}j`}
+                      value={editMonthCustomWorkingDays}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setEditMonthCustomWorkingDays(val);
+                        if (val !== '' && !isNaN(parseInt(val, 10))) {
+                          setEditMonthCustomBaseHours(String(parseInt(val, 10) * 7));
+                        }
+                      }}
+                      className="w-full text-xs font-semibold px-3 py-2 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-600 bg-white"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-semibold text-slate-600 mb-1">
+                      Base d'heures du mois :
+                    </label>
+                    <input
+                      type="number"
+                      step="0.1"
+                      min="0"
+                      placeholder={`Auto : ${getMonthWorkingCalendar(editMonthKey).standardBaseHours}h`}
+                      value={editMonthCustomBaseHours}
+                      onChange={(e) => setEditMonthCustomBaseHours(e.target.value)}
+                      className="w-full text-xs font-semibold px-3 py-2 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-600 bg-white"
+                    />
+                  </div>
+                </div>
+
+                <p className="text-[10px] text-slate-500 leading-relaxed">
+                  Laissez vide pour conserver le <strong>calcul automatique</strong> basé sur les jours ouvrés réels du mois (7h/jour ouvré, hors jours fériés). Remplissez pour moduler manuellement.
+                </p>
               </div>
 
               <div className="text-[11px] text-emerald-800 bg-emerald-50 p-2.5 rounded-lg border border-emerald-200">
