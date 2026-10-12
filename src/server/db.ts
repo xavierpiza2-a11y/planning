@@ -194,31 +194,32 @@ export function calculateShiftDurationHours(
   const s = (shiftText || '').trim().toUpperCase();
   const h = (hoursText || '').trim();
 
-  // Absences and rests = 0h
+  // Absences and rests = 0h (AT and MALADIE are excluded here because they count 7h)
   if (
     s.includes('REPOS') ||
     s.includes('CONGES') ||
     s.includes('CONGÉS') ||
     s.includes('RTT') ||
-    s.includes('MALADIE') ||
-    s === 'AT' ||
     s === 'ABSENT'
   ) {
     return 0;
   }
 
+  // AT (Accident du Travail) & Maladie : comptabilisé 7h
+  if (s === 'AT' || /\bAT\b/i.test(s) || s.includes('MALADIE') || s.includes('ACCIDENT')) {
+    return 7;
+  }
+
   // 1. Cross-reference against Tableau 2 options
   if (Array.isArray(tableau2Options) && tableau2Options.length > 0) {
     for (const opt of tableau2Options) {
-      if (
-        opt.shift &&
-        opt.shift.toUpperCase() === s &&
-        opt.hours &&
-        h &&
-        opt.hours.replace(/\s+/g, '') === h.replace(/\s+/g, '')
-      ) {
-        if (opt.hoursDecimal !== undefined && opt.hoursDecimal >= 0) {
-          return opt.hoursDecimal;
+      if (opt.shift && opt.shift.toUpperCase() === s) {
+        const optH = (opt.hours || '').replace(/\s+/g, '');
+        const currentH = h.replace(/\s+/g, '');
+        if (optH === currentH || (!optH && !currentH)) {
+          if (opt.hoursDecimal !== undefined && opt.hoursDecimal !== null && opt.hoursDecimal >= 0) {
+            return opt.hoursDecimal;
+          }
         }
       }
     }
@@ -266,6 +267,7 @@ export function calculateShiftDurationHours(
   }
 
   // 5. Fallback defaults by shift code
+  if (s === 'AT' || /\bAT\b/i.test(s) || s.includes('MALADIE') || s.includes('ACCIDENT')) return 7;
   if (s.includes('MATIN') || s.includes('SOIR')) return 7;
   if (s.includes('JOURNEE') || s.includes('JOURNÉE')) return 7.5;
   if (s.includes('FORMATION')) return 7;

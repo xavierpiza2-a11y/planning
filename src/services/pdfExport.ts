@@ -387,13 +387,6 @@ export function exportTeamPlanningToPDF({
   doc.setFontSize(6.2);
   doc.setTextColor(100, 116, 139);
 
-  // Left: Legend
-  doc.text(
-    'LÉGENDE : Matin (Bleu) · Soir (Ambre) · Journée (Vert) · Repos (Gris) · Congés (Orange) · RTT (Sarcelle) · Formation (Violet)',
-    margin,
-    footerY
-  );
-
   // Right: Export date & time
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(22, 101, 52);

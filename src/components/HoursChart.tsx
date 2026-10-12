@@ -42,8 +42,21 @@ interface HoursChartProps {
 export function parseHoursFromDay(shiftText: string, hoursText?: string): number {
   if (!shiftText && !hoursText) return 0;
   const cat = categorizeShift(shiftText, hoursText);
-  if (cat === 'REPOS' || cat === 'CONGES' || cat === 'RTT') {
+  const sUpper = (shiftText || '').trim().toUpperCase();
+
+  if (cat === 'REPOS' || cat === 'CONGES' || cat === 'RTT' || cat === 'FERIE') {
     return 0;
+  }
+
+  // AT (Accident du Travail) & Maladie : comptabilisé 7h
+  if (
+    cat === 'AT' ||
+    sUpper === 'AT' ||
+    /\bAT\b/i.test(sUpper) ||
+    sUpper.includes('MALADIE') ||
+    sUpper.includes('ACCIDENT')
+  ) {
+    return 7;
   }
 
   const hStr = (hoursText || '').trim();
@@ -91,6 +104,8 @@ export function parseHoursFromDay(shiftText: string, hoursText?: string): number
 
   // 4. Fallback defaults based on shift category
   switch (cat) {
+    case 'AT':
+      return 7;
     case 'MATIN':
       return 7;
     case 'SOIR':

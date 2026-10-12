@@ -40,20 +40,30 @@ export function calculateHours(
 
   // Check category
   const cat = categorizeShift(s, h);
-  if (cat === 'REPOS' || cat === 'CONGES' || cat === 'RTT') {
+  if (cat === 'REPOS' || cat === 'CONGES' || cat === 'RTT' || cat === 'FERIE') {
     return 0;
+  }
+
+  // AT (Accident du Travail) & Maladie : comptabilisé 7h
+  if (
+    cat === 'AT' ||
+    s === 'AT' ||
+    /\bAT\b/i.test(s) ||
+    s.includes('MALADIE') ||
+    s.includes('ACCIDENT')
+  ) {
+    return 7;
   }
 
   // 1. Cross-reference with defined Créneaux options
   for (const opt of tableau2Options) {
-    if (
-      opt.shift.toUpperCase() === s &&
-      opt.hours &&
-      h &&
-      opt.hours.replace(/\s+/g, '') === h.replace(/\s+/g, '')
-    ) {
-      if (opt.hoursDecimal !== undefined && opt.hoursDecimal >= 0) {
-        return opt.hoursDecimal;
+    if (opt.shift.toUpperCase() === s) {
+      const optH = (opt.hours || '').replace(/\s+/g, '');
+      const currentH = h.replace(/\s+/g, '');
+      if (optH === currentH || (!optH && !currentH)) {
+        if (opt.hoursDecimal !== undefined && opt.hoursDecimal !== null && opt.hoursDecimal >= 0) {
+          return opt.hoursDecimal;
+        }
       }
     }
   }
@@ -101,6 +111,8 @@ export function calculateHours(
 
   // 5. Default fallbacks based on category
   switch (cat) {
+    case 'AT':
+      return 7;
     case 'MATIN':
       return 7;
     case 'SOIR':
@@ -110,7 +122,7 @@ export function calculateHours(
     case 'FORMATION':
       return 7;
     default:
-      return 0;
+      return s === 'AT' || /\bAT\b/i.test(s) ? 7 : 0;
   }
 }
 

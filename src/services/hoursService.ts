@@ -231,7 +231,13 @@ export function parseWorkedHours(
   }
 
   // 2. AT / Arrêt de travail : 7h sur l'annualisation et régimes horaires
-  if (cat === 'AT' || sUpper === 'AT' || sUpper === 'MALADIE') {
+  if (
+    cat === 'AT' ||
+    sUpper === 'AT' ||
+    /\bAT\b/i.test(sUpper) ||
+    sUpper.includes('MALADIE') ||
+    sUpper.includes('ACCIDENT')
+  ) {
     return 7;
   }
 

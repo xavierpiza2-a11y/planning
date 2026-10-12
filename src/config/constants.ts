@@ -251,7 +251,14 @@ export function categorizeShift(shiftText: string, hoursText?: string): ShiftCat
     return 'FERIE';
   }
 
-  if (s === 'AT' || s === 'MALADIE' || s === 'ACCIDENT') {
+  if (
+    s === 'AT' ||
+    /\bAT\b/i.test(s) ||
+    s.includes('MALADIE') ||
+    s.includes('ACCIDENT') ||
+    s.includes('ARRÊT') ||
+    s.includes('ARRET')
+  ) {
     return 'AT';
   }
 
