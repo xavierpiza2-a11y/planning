@@ -576,9 +576,13 @@ export const AdminShiftEditModal: React.FC<AdminShiftEditModalProps> = ({
                               />
                               <p className="font-bold truncate">{opt.label}</p>
                             </div>
-                            {opt.hours && (
+                            {opt.hours ? (
                               <p className="text-[10px] font-mono mt-0.5 opacity-80">{opt.hours}</p>
-                            )}
+                            ) : opt.hoursDecimal && opt.hoursDecimal > 0 ? (
+                              <p className="text-[10px] font-mono mt-0.5 text-emerald-800 font-bold">
+                                {opt.hoursDecimal}h comptabilisées
+                              </p>
+                            ) : null}
                             {opt.description && (
                               <p className="text-[10px] opacity-70 truncate mt-0.5">{opt.description}</p>
                             )}

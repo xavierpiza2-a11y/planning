@@ -286,6 +286,8 @@ export function parseWorkedHours(
 
   // Fallback based on category
   switch (cat) {
+    case 'AT':
+      return 7;
     case 'MATIN':
       return 7;
     case 'SOIR':
@@ -408,6 +410,7 @@ export interface EmployeeBalances {
   isCreditExercise: boolean;
   isDebitExercise: boolean;
   debtSummaryText: string;
+  hasAnnualHoursCounter: boolean;
 }
 
 /**
@@ -417,25 +420,39 @@ function getScheduleFromCache(employeeName: string, monthKey: string): EmployeeM
   if (typeof window === 'undefined') return null;
   const lower = employeeName.toLowerCase();
 
-  // Try direct individual cache
-  try {
-    const rawIndiv = localStorage.getItem(`planning_cached_sched_${employeeName}_${monthKey}`);
-    if (rawIndiv) return JSON.parse(rawIndiv);
-  } catch {
-    // ignore
+  // Try direct individual cache - check all key variants
+  const possibleIndivKeys = [
+    `planning_sched_${employeeName}_${monthKey}`,
+    `planning_cached_sched_${employeeName}_${monthKey}`,
+    `planning_sched_${lower}_${monthKey}`,
+    `planning_cached_sched_${lower}_${monthKey}`,
+  ];
+  for (const k of possibleIndivKeys) {
+    try {
+      const rawIndiv = localStorage.getItem(k);
+      if (rawIndiv) return JSON.parse(rawIndiv);
+    } catch {
+      // ignore
+    }
   }
 
-  // Try team cache
-  try {
-    const rawTeam = localStorage.getItem(`planning_cached_team_${monthKey}`);
-    if (rawTeam) {
-      const parsedTeam = JSON.parse(rawTeam);
-      if (parsedTeam[employeeName]) return parsedTeam[employeeName];
-      const found = Object.entries(parsedTeam).find(([k]) => k.toLowerCase() === lower);
-      if (found) return found[1] as EmployeeMonthSchedule;
+  // Try team cache - check all key variants
+  const possibleTeamKeys = [
+    `planning_team_${monthKey}`,
+    `planning_cached_team_${monthKey}`,
+  ];
+  for (const tk of possibleTeamKeys) {
+    try {
+      const rawTeam = localStorage.getItem(tk);
+      if (rawTeam) {
+        const parsedTeam = JSON.parse(rawTeam);
+        if (parsedTeam[employeeName]) return parsedTeam[employeeName];
+        const found = Object.entries(parsedTeam).find(([k]) => k.toLowerCase() === lower);
+        if (found) return found[1] as EmployeeMonthSchedule;
+      }
+    } catch {
+      // ignore
     }
-  } catch {
-    // ignore
   }
 
   return null;
@@ -630,14 +647,12 @@ export function calculateEmployeeBalances(params: {
       mHours = sched.totalHours;
     }
 
-    if (isElapsedOrCurrent) {
+    if (isElapsedOrCurrent && contractType === 'ANNUALISE') {
       totalExerciseHours += mHours;
       // Expected theoretical hours for elapsed month based on working days minus CP
-      if (contractType === 'ANNUALISE' || contractType === 'HEBDO_35H') {
-        const effDays = Math.max(0, mCal.netWorkingDays - mCP);
-        expectedExerciseHoursToDate += effDays * dailyQuota;
-      }
-    } else {
+      const effDays = Math.max(0, mCal.netWorkingDays - mCP);
+      expectedExerciseHoursToDate += effDays * dailyQuota;
+    } else if (contractType === 'ANNUALISE') {
       // Future months in exercise: if already entered in schedule, use mHours, otherwise use standard theoretical base
       if (mHours > 0) {
         futureProjectedHours += mHours;
@@ -647,14 +662,16 @@ export function calculateEmployeeBalances(params: {
     }
   });
 
-  const exerciseHours = Math.round(totalExerciseHours * 10) / 10;
-  expectedExerciseHoursToDate = Math.round(expectedExerciseHoursToDate * 10) / 10;
+  const isAnnualised = contractType === 'ANNUALISE';
+  const is35h = contractType === 'HEBDO_35H';
 
-  // Realized gap at date
-  const exerciseBalance =
-    contractType === 'FORFAIT_JOUR'
-      ? 0
-      : Math.round((exerciseHours - expectedExerciseHoursToDate) * 10) / 10;
+  const exerciseHours = isAnnualised ? Math.round(totalExerciseHours * 10) / 10 : 0;
+  expectedExerciseHoursToDate = isAnnualised ? Math.round(expectedExerciseHoursToDate * 10) / 10 : 0;
+
+  // Realized gap at date (only relevant for Annualisé)
+  const exerciseBalance = isAnnualised
+    ? Math.round((exerciseHours - expectedExerciseHoursToDate) * 10) / 10
+    : 0;
 
   // Projected end of exercise (May 31):
   // Realized hours + future projected hours - remaining un-taken leave adjustment
@@ -665,17 +682,18 @@ export function calculateEmployeeBalances(params: {
 
   // Future base adjustment: deduct remaining leave that will be taken before May 31
   const futureLeaveDeductionHours = paidLeaveRemaining * 7;
-  const projectedExerciseEndHours = Math.round(
-    Math.max(0, totalExerciseHours + Math.max(0, futureProjectedHours - futureLeaveDeductionHours)) * 10
-  ) / 10;
+  const projectedExerciseEndHours = isAnnualised
+    ? Math.round(
+        Math.max(0, totalExerciseHours + Math.max(0, futureProjectedHours - futureLeaveDeductionHours)) * 10
+      ) / 10
+    : 0;
 
-  const projectedExerciseEndBalance =
-    contractType === 'FORFAIT_JOUR'
-      ? 0
-      : Math.round((projectedExerciseEndHours - yearlyQuota) * 10) / 10;
+  const projectedExerciseEndBalance = isAnnualised
+    ? Math.round((projectedExerciseEndHours - yearlyQuota) * 10) / 10
+    : 0;
 
   const exerciseCompletionPercent =
-    yearlyQuota > 0 ? Math.min(100, Math.round((exerciseHours / yearlyQuota) * 100)) : 0;
+    isAnnualised && yearlyQuota > 0 ? Math.min(100, Math.round((exerciseHours / yearlyQuota) * 100)) : 0;
 
   // Forfait Jour specific metrics
   const exerciseWorkedDays = totalExerciseWorkedDays;
@@ -695,11 +713,19 @@ export function calculateEmployeeBalances(params: {
 
   // Summary debt text
   let debtSummaryText = 'À l’équilibre';
-  if (contractType !== 'FORFAIT_JOUR') {
+  if (isAnnualised) {
     if (exerciseBalance > 0) {
-      debtSummaryText = `Vous lui devez ${Math.abs(exerciseBalance)}h`;
+      debtSummaryText = `Vous lui devez ${Math.abs(exerciseBalance)}h (exercice)`;
     } else if (exerciseBalance < 0) {
-      debtSummaryText = `Il vous doit ${Math.abs(exerciseBalance)}h`;
+      debtSummaryText = `Il vous doit ${Math.abs(exerciseBalance)}h (exercice)`;
+    }
+  } else if (is35h) {
+    if (monthBalance > 0) {
+      debtSummaryText = `+${monthBalance}h ce mois`;
+    } else if (monthBalance < 0) {
+      debtSummaryText = `${monthBalance}h ce mois`;
+    } else {
+      debtSummaryText = 'Mois équilibré';
     }
   } else {
     debtSummaryText = `${forfaitDaysRemaining}j à faire`;
@@ -753,6 +779,7 @@ export function calculateEmployeeBalances(params: {
     isCreditExercise: exerciseBalance > 0,
     isDebitExercise: exerciseBalance < 0,
     debtSummaryText,
+    hasAnnualHoursCounter: isAnnualised,
   };
 }
 
@@ -780,12 +807,20 @@ export function simulateShiftImpact(params: {
 } {
   const { currentBalances, currentShift, currentHours, newOption } = params;
   const isForfait = currentBalances.contractType === 'FORFAIT_JOUR';
+  const isAnnualised = currentBalances.contractType === 'ANNUALISE';
 
   const oldHours = parseWorkedHours(currentShift, currentHours, currentBalances.contractType);
-  const newHours =
-    newOption.hoursDecimal !== undefined && newOption.hoursDecimal >= 0
-      ? newOption.hoursDecimal
-      : parseWorkedHours(newOption.shift, newOption.hours, currentBalances.contractType);
+  const isAtOption =
+    newOption.shift === 'AT' ||
+    newOption.category === 'AT' ||
+    /\bAT\b/i.test(newOption.shift) ||
+    newOption.shift.toUpperCase().includes('MALADIE');
+
+  const newHours = isAtOption
+    ? (newOption.hoursDecimal && newOption.hoursDecimal > 0 ? newOption.hoursDecimal : 7)
+    : (newOption.hoursDecimal !== undefined && newOption.hoursDecimal >= 0
+        ? newOption.hoursDecimal
+        : parseWorkedHours(newOption.shift, newOption.hours, currentBalances.contractType));
 
   const deltaHours = Math.round((newHours - oldHours) * 10) / 10;
 
@@ -809,10 +844,12 @@ export function simulateShiftImpact(params: {
     newWeekBalance = Math.round((currentBalances.weekBalance + deltaHours) * 10) / 10;
   }
 
-  const newExerciseHours = Math.round((currentBalances.exerciseHours + deltaHours) * 10) / 10;
-  const newExerciseBalance = isForfait
-    ? 0
-    : Math.round((currentBalances.exerciseBalance + deltaHours) * 10) / 10;
+  const newExerciseHours = isAnnualised
+    ? Math.round((currentBalances.exerciseHours + deltaHours) * 10) / 10
+    : 0;
+  const newExerciseBalance = isAnnualised
+    ? Math.round((currentBalances.exerciseBalance + deltaHours) * 10) / 10
+    : 0;
 
   // Impact on leave
   const wasOldLeave = categorizeShift(currentShift, currentHours) === 'CONGES';
@@ -863,8 +900,8 @@ export function simulateShiftImpact(params: {
       statusType = 'neutral';
       summaryText = `Reste ${newForfaitDaysRemaining}j à faire sur l'exercice`;
     }
-  } else {
-    // 35h or Annualisé
+  } else if (isAnnualised) {
+    // Annualisé
     if (isNewFerie) {
       statusType = 'neutral';
       summaryText = `Jour Férié chômé (-7h sur la base à faire du mois)`;
@@ -877,6 +914,21 @@ export function simulateShiftImpact(params: {
     } else {
       statusType = 'neutral';
       summaryText = `Aucun changement d'heures (solde année : ${newExerciseBalance > 0 ? `+${newExerciseBalance}h` : `${newExerciseBalance}h`})`;
+    }
+  } else {
+    // 35h: Semaine et mois uniquement, pas de cumul annuel d'heures
+    if (isNewFerie) {
+      statusType = 'neutral';
+      summaryText = `Jour Férié chômé (-7h sur la base du mois)`;
+    } else if (deltaHours > 0) {
+      statusType = 'credit';
+      summaryText = `+${deltaHours}h sur le planning (solde mois : ${newMonthBalance > 0 ? `+${newMonthBalance}h` : `${newMonthBalance}h`})`;
+    } else if (deltaHours < 0) {
+      statusType = 'debit';
+      summaryText = `${deltaHours}h sur le planning (solde mois : ${newMonthBalance > 0 ? `+${newMonthBalance}h` : `${newMonthBalance}h`})`;
+    } else {
+      statusType = 'neutral';
+      summaryText = `Aucun changement d'heures (solde mois : ${newMonthBalance > 0 ? `+${newMonthBalance}h` : `${newMonthBalance}h`})`;
     }
   }
 

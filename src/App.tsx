@@ -19,6 +19,7 @@ import {
 } from './config/constants';
 import {
   fetchConfig,
+  fetchAllSchedules,
   fetchEmployeeSchedule,
   fetchTeamPlanning,
   fetchChanges,
@@ -252,6 +253,8 @@ export default function App() {
         }
         setIsProfileModalOpen(true);
       }
+      // Populate exercise schedules cache in the background
+      fetchAllSchedules();
     });
   }, [isTokenValidated]);
 
@@ -495,6 +498,7 @@ export default function App() {
   // Full Refresh
   const handleManualRefresh = () => {
     loadTeamSchedule(selectedMonth, employees);
+    fetchAllSchedules();
     if (currentEmployee) {
       loadMySchedule(currentEmployee.name, selectedMonth);
       checkEmployeeChanges(currentEmployee.name);

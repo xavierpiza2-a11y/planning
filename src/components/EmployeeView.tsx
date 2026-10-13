@@ -120,9 +120,10 @@ export const EmployeeView: React.FC<EmployeeViewProps> = ({
     return calculateEmployeeBalances({
       employee: currentEmployee,
       selectedMonth,
+      targetDate: todayStr,
       currentSchedule: schedule,
     });
-  }, [currentEmployee, selectedMonth, schedule]);
+  }, [currentEmployee, selectedMonth, schedule, todayStr]);
 
   // Statistics calculation
   const stats = useMemo(() => {
@@ -320,21 +321,33 @@ export const EmployeeView: React.FC<EmployeeViewProps> = ({
                 </p>
               </div>
 
-              {/* Forfait Jour : RTT Restants */}
+              {/* Forfait Jour : CP Restants */}
               <div className="bg-white rounded-xl border border-slate-200 p-2.5 text-center shadow-xs">
                 <div className="text-[10px] uppercase font-semibold text-slate-500 tracking-wider flex items-center justify-center gap-1 mb-1">
-                  <Sparkles className="w-3 h-3 text-teal-600" />
-                  <span>RTT Restants</span>
+                  <Palmtree className="w-3 h-3 text-amber-600" />
+                  <span>CP Restants</span>
                 </div>
-                <p className="text-base sm:text-lg font-bold text-teal-700 tabular-nums">
-                  {employeeBalances.rttRemaining}
+                <p className="text-base sm:text-lg font-bold text-amber-700 tabular-nums">
+                  {employeeBalances.paidLeaveRemaining}
                   <span className="text-xs font-normal text-slate-500 ml-0.5">j</span>
                 </p>
               </div>
             </>
-          ) : (
+          ) : employeeBalances.contractType === 'HEBDO_35H' ? (
             <>
-              {/* Régimes Horaires : Écart Mois */}
+              {/* 35h : Heures Semaine en cours */}
+              <div className="bg-white rounded-xl border border-slate-200 p-2.5 text-center shadow-xs">
+                <div className="text-[10px] uppercase font-semibold text-slate-500 tracking-wider flex items-center justify-center gap-1 mb-1">
+                  <Clock className="w-3 h-3 text-blue-600" />
+                  <span>Heures Semaine</span>
+                </div>
+                <p className="text-base sm:text-lg font-bold text-slate-900 tabular-nums">
+                  {employeeBalances.weekHours !== undefined ? `${employeeBalances.weekHours}h` : '—'}
+                  <span className="text-xs font-normal text-slate-500 ml-0.5">/ {employeeBalances.weekQuota ?? 35}h</span>
+                </p>
+              </div>
+
+              {/* 35h : Écart Mois */}
               <div className="bg-white rounded-xl border border-slate-200 p-2.5 text-center shadow-xs">
                 <div className="text-[10px] uppercase font-semibold text-slate-500 tracking-wider flex items-center justify-center gap-1 mb-1">
                   <Scale className="w-3 h-3 text-sky-600" />
@@ -355,7 +368,42 @@ export const EmployeeView: React.FC<EmployeeViewProps> = ({
                 </p>
               </div>
 
-              {/* Régimes Horaires : Écart Année (1er Juin - 31 Mai) */}
+              {/* 35h : Congés Payés Restants (sur l'exercice 1er Juin - 31 Mai) */}
+              <div className="bg-white rounded-xl border border-slate-200 p-2.5 text-center shadow-xs">
+                <div className="text-[10px] uppercase font-semibold text-slate-500 tracking-wider flex items-center justify-center gap-1 mb-1">
+                  <Palmtree className="w-3 h-3 text-amber-600" />
+                  <span>CP Restants</span>
+                </div>
+                <p className="text-base sm:text-lg font-bold text-amber-700 tabular-nums">
+                  {employeeBalances.paidLeaveRemaining}
+                  <span className="text-xs font-normal text-slate-500 ml-0.5">j</span>
+                </p>
+              </div>
+            </>
+          ) : (
+            <>
+              {/* Annualisé : Écart Mois */}
+              <div className="bg-white rounded-xl border border-slate-200 p-2.5 text-center shadow-xs">
+                <div className="text-[10px] uppercase font-semibold text-slate-500 tracking-wider flex items-center justify-center gap-1 mb-1">
+                  <Scale className="w-3 h-3 text-sky-600" />
+                  <span>Écart Mois</span>
+                </div>
+                <p
+                  className={`text-base sm:text-lg font-bold tabular-nums ${
+                    employeeBalances.monthBalance > 0
+                      ? 'text-sky-700'
+                      : employeeBalances.monthBalance < 0
+                      ? 'text-amber-700'
+                      : 'text-slate-900'
+                  }`}
+                >
+                  {employeeBalances.monthBalance > 0
+                    ? `+${employeeBalances.monthBalance}h`
+                    : `${employeeBalances.monthBalance}h`}
+                </p>
+              </div>
+
+              {/* Annualisé : Écart Année (1er Juin - 31 Mai) */}
               <div className="bg-white rounded-xl border border-slate-200 p-2.5 text-center shadow-xs">
                 <div className="text-[10px] uppercase font-semibold text-slate-500 tracking-wider flex items-center justify-center gap-1 mb-1">
                   <Scale className="w-3 h-3 text-emerald-600" />
@@ -394,10 +442,11 @@ export const EmployeeView: React.FC<EmployeeViewProps> = ({
         {/* Info strip */}
         <div className="flex items-center justify-between px-2 text-[11px] text-slate-500 flex-wrap gap-1">
           <span>
-            Exercice : <strong className="text-slate-700">{employeeBalances.exercise.label}</strong>
+            Exercice conventionnel : <strong className="text-slate-700">{employeeBalances.exercise.label}</strong>
           </span>
           <span className="flex items-center gap-2">
             <span>Régime : <strong className="text-slate-700">{employeeBalances.contractLabel}</strong></span>
+            <span>· CP restants : <strong className="text-amber-700">{employeeBalances.paidLeaveRemaining}j</strong></span>
             {employeeBalances.rttTotal > 0 && (
               <span>· RTT restants : <strong className="text-teal-700">{employeeBalances.rttRemaining}j</strong></span>
             )}

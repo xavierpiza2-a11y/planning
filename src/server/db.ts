@@ -275,6 +275,10 @@ export function calculateShiftDurationHours(
   return 0;
 }
 
+export async function dbGetAllSchedules(): Promise<Record<string, Record<string, EmployeeScheduleData>>> {
+  return memoryDb.schedules || {};
+}
+
 export async function dbSaveMonthSchedules(
   monthKey: string,
   teamSchedules: Record<string, EmployeeScheduleData>

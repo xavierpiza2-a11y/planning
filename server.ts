@@ -8,6 +8,7 @@ import {
   getDatabaseStatus,
   dbGetConfig,
   dbSaveConfig,
+  dbGetAllSchedules,
   dbGetMonthSchedules,
   dbSaveMonthSchedules,
   dbUpdateShift,
@@ -198,7 +199,17 @@ app.post('/api/verify-pin', async (req, res) => {
   }
 });
 
-// 2. Month Schedules
+// 2. Schedules
+app.get('/api/schedules', async (req, res) => {
+  try {
+    const schedules = await dbGetAllSchedules();
+    res.json({ success: true, schedules });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// Month Schedules
 app.get('/api/schedules/:monthKey', async (req, res) => {
   try {
     const { monthKey } = req.params;

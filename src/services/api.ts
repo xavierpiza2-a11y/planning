@@ -826,12 +826,42 @@ export async function fetchTeamPlanning(
   // Update display cache
   if (typeof window !== 'undefined') {
     localStorage.setItem(`${CACHE_PREFIX_TEAM}${monthKey}`, JSON.stringify(result));
+    localStorage.setItem(`planning_cached_team_${monthKey}`, JSON.stringify(result));
     for (const [empName, sched] of Object.entries(result)) {
       localStorage.setItem(`${CACHE_PREFIX_SCHEDULE}${empName}_${monthKey}`, JSON.stringify(sched));
+      localStorage.setItem(`planning_cached_sched_${empName}_${monthKey}`, JSON.stringify(sched));
     }
   }
 
   return { teamSchedules: result, isOffline: false };
+}
+
+/**
+ * Fetch all months schedules from Database and populate cache for annual exercise calculations
+ */
+export async function fetchAllSchedules(): Promise<Record<string, Record<string, EmployeeMonthSchedule>> | null> {
+  try {
+    const res = await fetch('/api/schedules');
+    if (res.ok) {
+      const data = await res.json();
+      if (data.success && data.schedules) {
+        if (typeof window !== 'undefined') {
+          for (const [mKey, teamMap] of Object.entries(data.schedules as Record<string, Record<string, any>>)) {
+            localStorage.setItem(`${CACHE_PREFIX_TEAM}${mKey}`, JSON.stringify(teamMap));
+            localStorage.setItem(`planning_cached_team_${mKey}`, JSON.stringify(teamMap));
+            for (const [empName, empSched] of Object.entries(teamMap)) {
+              localStorage.setItem(`${CACHE_PREFIX_SCHEDULE}${empName}_${mKey}`, JSON.stringify(empSched));
+              localStorage.setItem(`planning_cached_sched_${empName}_${mKey}`, JSON.stringify(empSched));
+            }
+          }
+        }
+        return data.schedules;
+      }
+    }
+  } catch (err) {
+    console.warn('Network error fetching all schedules:', err);
+  }
+  return null;
 }
 
 /**

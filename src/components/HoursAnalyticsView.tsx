@@ -185,11 +185,11 @@ export const HoursAnalyticsView: React.FC<HoursAnalyticsViewProps> = ({
   // Aggregate Team Totals
   const teamAggregate = useMemo(() => {
     let totalHours = 0;
-    let totalExerciseBalance = 0;
+    let totalLeaveDays = 0;
 
     teamEmployeesStats.forEach((st) => {
       totalHours += st.totalHours;
-      totalExerciseBalance += st.balances.exerciseBalance;
+      totalLeaveDays += st.leaveDays;
     });
 
     const activeEmpCount = teamEmployeesStats.filter((st) => st.totalHours > 0).length || employees.length || 1;
@@ -197,7 +197,7 @@ export const HoursAnalyticsView: React.FC<HoursAnalyticsViewProps> = ({
 
     return {
       totalHours: Math.round(totalHours * 10) / 10,
-      totalExerciseBalance: Math.round(totalExerciseBalance * 10) / 10,
+      totalLeaveDays,
       activeEmpCount,
       avgHoursPerEmployee,
     };
@@ -366,20 +366,16 @@ export const HoursAnalyticsView: React.FC<HoursAnalyticsViewProps> = ({
             </div>
 
             <div className="bg-white rounded-2xl border border-slate-200/90 p-3.5 shadow-2xs">
-              <div className="flex items-center gap-1.5 text-[11px] font-semibold text-emerald-800 uppercase tracking-wider mb-1">
-                <Scale className="w-3.5 h-3.5 text-emerald-600" />
-                <span>Écart Année Équipe</span>
+              <div className="flex items-center gap-1.5 text-[11px] font-semibold text-amber-800 uppercase tracking-wider mb-1">
+                <Palmtree className="w-3.5 h-3.5 text-amber-600" />
+                <span>Congés Posés Mois</span>
               </div>
               <div className="text-2xl font-black text-slate-900 tabular-nums">
-                {teamAggregate.totalExerciseBalance > 0
-                  ? `+${teamAggregate.totalExerciseBalance}`
-                  : `${teamAggregate.totalExerciseBalance}`}
-                <span className="text-sm font-bold text-emerald-600 ml-0.5">h</span>
+                {teamAggregate.totalLeaveDays}
+                <span className="text-sm font-bold text-amber-600 ml-0.5">j</span>
               </div>
               <p className="text-[10px] text-slate-500 mt-0.5">
-                {teamAggregate.totalExerciseBalance >= 0
-                  ? 'Dû aux salariés (1er Juin – 31 Mai)'
-                  : 'Dû au magasin (1er Juin – 31 Mai)'}
+                Sur le mois de {monthLabel}
               </p>
             </div>
 
@@ -531,16 +527,18 @@ export const HoursAnalyticsView: React.FC<HoursAnalyticsViewProps> = ({
                                       {(data.balances?.monthBalance ?? 0) > 0 ? `+${data.balances?.monthBalance}h` : `${data.balances?.monthBalance}h`}
                                     </span>
                                   </div>
-                                  <div className="flex items-center justify-between text-[11px]">
-                                    <span className="text-slate-400">Écart année :</span>
-                                    <span
-                                      className={`font-semibold tabular-nums ${
-                                        (data.balances?.exerciseBalance ?? 0) >= 0 ? 'text-sky-400' : 'text-amber-400'
-                                      }`}
-                                    >
-                                      {(data.balances?.exerciseBalance ?? 0) > 0 ? `+${data.balances?.exerciseBalance}h` : `${data.balances?.exerciseBalance}h`}
-                                    </span>
-                                  </div>
+                                  {data.balances?.hasAnnualHoursCounter && (
+                                    <div className="flex items-center justify-between text-[11px]">
+                                      <span className="text-slate-400">Écart année :</span>
+                                      <span
+                                        className={`font-semibold tabular-nums ${
+                                          (data.balances?.exerciseBalance ?? 0) >= 0 ? 'text-sky-400' : 'text-amber-400'
+                                        }`}
+                                      >
+                                        {(data.balances?.exerciseBalance ?? 0) > 0 ? `+${data.balances?.exerciseBalance}h` : `${data.balances?.exerciseBalance}h`}
+                                      </span>
+                                    </div>
+                                  )}
                                 </>
                               )}
                               <div className="text-[10px] text-emerald-400 pt-1 text-center font-medium">
@@ -789,22 +787,27 @@ export const HoursAnalyticsView: React.FC<HoursAnalyticsViewProps> = ({
                         </div>
                         <div className="flex items-center gap-1.5 text-xs text-slate-500 mt-0.5 flex-wrap">
                           <span className="font-semibold text-slate-700">{st.balances.contractLabel}</span>
-                          <span aria-hidden="true">·</span>
                           {st.balances.contractType === 'FORFAIT_JOUR' ? (
-                            <span className="text-sky-700 font-bold">
-                              Reste : {st.balances.forfaitDaysRemaining}j à faire
-                            </span>
-                          ) : (
-                            <span className={st.balances.exerciseBalance > 0 ? 'text-sky-700 font-bold' : st.balances.exerciseBalance < 0 ? 'text-amber-700 font-bold' : 'text-slate-600'}>
-                              Année : {st.balances.exerciseBalance > 0 ? `+${st.balances.exerciseBalance}h (dû salarié)` : st.balances.exerciseBalance < 0 ? `${st.balances.exerciseBalance}h (dû magasin)` : '0h (équilibré)'}
-                            </span>
-                          )}
+                            <>
+                              <span aria-hidden="true">·</span>
+                              <span className="text-sky-700 font-bold">
+                                Reste : {st.balances.forfaitDaysRemaining}j à faire
+                              </span>
+                            </>
+                          ) : st.balances.hasAnnualHoursCounter ? (
+                            <>
+                              <span aria-hidden="true">·</span>
+                              <span className={st.balances.exerciseBalance > 0 ? 'text-sky-700 font-bold' : st.balances.exerciseBalance < 0 ? 'text-amber-700 font-bold' : 'text-slate-600'}>
+                                Année : {st.balances.exerciseBalance > 0 ? `+${st.balances.exerciseBalance}h (dû salarié)` : st.balances.exerciseBalance < 0 ? `${st.balances.exerciseBalance}h (dû magasin)` : '0h (équilibré)'}
+                              </span>
+                            </>
+                          ) : null}
                           <span aria-hidden="true">·</span>
-                          <span className="text-amber-700 font-medium">CP : {st.balances.paidLeaveRemaining}j</span>
+                          <span className="text-amber-700 font-medium">CP restants : {st.balances.paidLeaveRemaining}j</span>
                           {st.balances.rttTotal > 0 && (
                             <>
                               <span aria-hidden="true">·</span>
-                              <span className="text-teal-700 font-medium">RTT : {st.balances.rttRemaining}j</span>
+                              <span className="text-teal-700 font-medium">RTT restants : {st.balances.rttRemaining}j</span>
                             </>
                           )}
                         </div>

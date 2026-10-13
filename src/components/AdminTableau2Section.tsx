@@ -292,7 +292,10 @@ export const AdminTableau2Section: React.FC<AdminTableau2SectionProps> = ({
 
     const shiftCode = formShiftCode.trim().toUpperCase() || title.toUpperCase();
     const finalHours = isWithoutHours ? '' : computedHoursString;
-    const finalDecimal = isWithoutHours ? 0 : computedDuration;
+    const isAt = shiftCode === 'AT' || /\bAT\b/i.test(shiftCode) || title.toUpperCase().includes('MALADIE');
+    const finalDecimal = isWithoutHours
+      ? (customHoursDecimal !== null && customHoursDecimal !== undefined ? customHoursDecimal : (isAt ? 7 : 0))
+      : computedDuration;
     const finalLabel = fullDisplayLabel;
 
     if (editingShiftId) {
@@ -918,8 +921,35 @@ export const AdminTableau2Section: React.FC<AdminTableau2SectionProps> = ({
                     </div>
                   </div>
                 ) : (
-                  <div className="p-3 bg-white rounded-xl border border-slate-200 text-center text-xs text-slate-500">
-                    Créneau sans plage horaire spécifique (durée comptabilisée = 0h).
+                  <div className="p-3 bg-white rounded-xl border border-slate-200 flex items-center justify-between text-xs">
+                    <div>
+                      <span className="font-bold text-slate-800">Créneau sans plage horaire</span>
+                      <p className="text-[11px] text-slate-500">
+                        {formShiftCode === 'AT' || /\bAT\b/i.test(formShiftCode) || formLabel.toUpperCase().includes('MALADIE')
+                          ? 'Comptabilisé 7h en temps de travail (ou 1j en forfait jour)'
+                          : 'Durée comptabilisée par défaut'}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <label className="text-[11px] font-semibold text-slate-600">Durée :</label>
+                      <input
+                        type="number"
+                        step="0.5"
+                        min="0"
+                        max="24"
+                        value={
+                          customHoursDecimal !== null && customHoursDecimal !== undefined
+                            ? customHoursDecimal
+                            : (formShiftCode === 'AT' || /\bAT\b/i.test(formShiftCode) || formLabel.toUpperCase().includes('MALADIE') ? 7 : 0)
+                        }
+                        onChange={(e) => {
+                          const val = parseFloat(e.target.value);
+                          setCustomHoursDecimal(isNaN(val) ? 0 : val);
+                        }}
+                        className="w-16 px-2 py-1 text-right text-xs font-bold font-mono bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+                      />
+                      <span className="text-xs font-bold text-slate-700">h</span>
+                    </div>
                   </div>
                 )}
               </div>
