@@ -22,6 +22,7 @@ import {
 import { realtimeClient, RealtimeMessage } from './realtimeClient';
 
 // Local storage display cache keys
+const KEY_ACTIVE_STORE_ID = 'planning_active_store_id';
 const KEY_STORE_NAME = 'planning_store_name';
 const KEY_API_TOKEN = 'planning_api_token';
 const KEY_CACHED_CONFIG = 'planning_cached_config';
@@ -32,6 +33,52 @@ const KEY_HISTORY_PREFIX = 'planning_history_';
 const KEY_DAY_NOTES_PREFIX = 'planning_day_notes_';
 const CACHE_PREFIX_SCHEDULE = 'planning_sched_';
 const CACHE_PREFIX_TEAM = 'planning_team_';
+
+export const STORAGE_KEY_ADMIN_PIN = 'planning_admin_pin';
+export const STORAGE_KEY_SUPERADMIN_SESSION = 'planning_superadmin_session';
+
+// ---------------------------------------------------------------------------
+// ACTIVE STORE STATE & HEADERS
+// ---------------------------------------------------------------------------
+export function getActiveStoreId(): string {
+  if (typeof window === 'undefined') return 'store_main';
+  return localStorage.getItem(KEY_ACTIVE_STORE_ID) || 'store_main';
+}
+
+export function setActiveStore(store: { id: string; name: string; token: string }): void {
+  if (typeof window === 'undefined') return;
+  const currentId = localStorage.getItem(KEY_ACTIVE_STORE_ID);
+  if (currentId && currentId !== store.id) {
+    // Clear previous store's cached plannings and notes to ensure clean isolation
+    for (let i = localStorage.length - 1; i >= 0; i--) {
+      const k = localStorage.key(i);
+      if (
+        k &&
+        (k.startsWith(CACHE_PREFIX_SCHEDULE) ||
+          k.startsWith(CACHE_PREFIX_TEAM) ||
+          k.startsWith('planning_cached_') ||
+          k.startsWith(KEY_DAY_NOTES_PREFIX) ||
+          k.startsWith(KEY_CHANGES_PREFIX) ||
+          k.startsWith(KEY_HISTORY_PREFIX))
+      ) {
+        localStorage.removeItem(k);
+      }
+    }
+  }
+
+  localStorage.setItem(KEY_ACTIVE_STORE_ID, store.id);
+  localStorage.setItem(KEY_STORE_NAME, store.name);
+  localStorage.setItem(KEY_API_TOKEN, store.token.trim().toUpperCase());
+}
+
+export function getStoreHeaders(): Record<string, string> {
+  const storeId = getActiveStoreId();
+  const headers: Record<string, string> = {};
+  if (storeId) {
+    headers['X-Store-Id'] = storeId;
+  }
+  return headers;
+}
 
 // ---------------------------------------------------------------------------
 // REAL-TIME CACHE SYNCHRONIZATION
@@ -61,7 +108,13 @@ function notifyDataChange(eventType: string, data: any) {
 
 // Listen to WebSocket broadcasts from backend
 if (typeof window !== 'undefined') {
-  realtimeClient.onMessage((msg: RealtimeMessage) => {
+  realtimeClient.onMessage((msg: RealtimeMessage & { storeId?: string }) => {
+    // Filter out messages for another store to avoid cross-contamination
+    const activeStoreId = getActiveStoreId();
+    if (msg.storeId && msg.storeId !== activeStoreId) {
+      return;
+    }
+
     switch (msg.type) {
       case 'CONFIG_UPDATED': {
         if (msg.config) {
@@ -96,9 +149,8 @@ if (typeof window !== 'undefined') {
         break;
       }
       case 'SHIFT_UPDATED': {
-        const { monthKey, employeeName, schedule, dateKey, shift, hours } = msg;
+        const { monthKey, employeeName, schedule } = msg;
         if (monthKey && employeeName && schedule) {
-          // Update team cache
           const teamKey = `${CACHE_PREFIX_TEAM}${monthKey}`;
           const raw = localStorage.getItem(teamKey);
           let teamMap: Record<string, any> = {};
@@ -111,8 +163,6 @@ if (typeof window !== 'undefined') {
           }
           teamMap[employeeName] = schedule;
           localStorage.setItem(teamKey, JSON.stringify(teamMap));
-
-          // Update individual cache
           localStorage.setItem(`${CACHE_PREFIX_SCHEDULE}${employeeName}_${monthKey}`, JSON.stringify(schedule));
         }
 
@@ -140,11 +190,13 @@ if (typeof window !== 'undefined') {
           const apiToken = localStorage.getItem('planning_api_token');
           const adminPin = localStorage.getItem('planning_admin_pin');
           const store = localStorage.getItem(KEY_STORE_NAME);
+          const activeId = localStorage.getItem(KEY_ACTIVE_STORE_ID);
           localStorage.clear();
           if (tokenVal) localStorage.setItem('planning_token_validated', tokenVal);
           if (apiToken) localStorage.setItem('planning_api_token', apiToken);
           if (adminPin) localStorage.setItem('planning_admin_pin', adminPin);
           if (store) localStorage.setItem(KEY_STORE_NAME, store);
+          if (activeId) localStorage.setItem(KEY_ACTIVE_STORE_ID, activeId);
         }
         notifyDataChange('STORE_RESET', msg);
         break;
@@ -210,8 +262,6 @@ export function getCachedTeamPlanning(
   }
 }
 
-export const STORAGE_KEY_ADMIN_PIN = 'planning_admin_pin';
-
 export function getApiToken(): string {
   if (typeof window === 'undefined') return DEFAULT_API_TOKEN;
   return localStorage.getItem(KEY_API_TOKEN) || DEFAULT_API_TOKEN;
@@ -231,7 +281,10 @@ export async function saveApiToken(newToken: string): Promise<boolean> {
   try {
     const res = await fetch('/api/config', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        ...getStoreHeaders(),
+      },
       body: JSON.stringify({ apiToken: token }),
     });
     return res.ok;
@@ -252,6 +305,10 @@ export async function verifyApiToken(token: string): Promise<boolean> {
     });
     if (res.ok) {
       const data = await res.json();
+      if (data.valid && data.store) {
+        setActiveStore(data.store);
+        return true;
+      }
       return Boolean(data.valid);
     }
   } catch {
@@ -259,6 +316,33 @@ export async function verifyApiToken(token: string): Promise<boolean> {
   }
   const configured = getApiToken().trim().toUpperCase();
   return entered === configured;
+}
+
+export async function verifyApiTokenWithStore(token: string): Promise<{
+  valid: boolean;
+  store?: { id: string; name: string; token: string };
+}> {
+  const entered = (token || '').trim().toUpperCase();
+  if (!entered) return { valid: false };
+  try {
+    const res = await fetch('/api/verify-token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token: entered }),
+    });
+    if (res.ok) {
+      const data = await res.json();
+      if (data.valid && data.store) {
+        setActiveStore(data.store);
+        return { valid: true, store: data.store };
+      }
+      return { valid: Boolean(data.valid) };
+    }
+  } catch {
+    // offline fallback
+  }
+  const configured = getApiToken().trim().toUpperCase();
+  return { valid: entered === configured };
 }
 
 export function getStoredAdminPin(): string {
@@ -284,7 +368,10 @@ export async function saveAdminPin(newPin: string): Promise<boolean> {
   try {
     const res = await fetch('/api/config', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        ...getStoreHeaders(),
+      },
       body: JSON.stringify({ adminPin: pin }),
     });
     return res.ok;
@@ -300,7 +387,10 @@ export async function verifyAdminPin(pin: string): Promise<boolean> {
   try {
     const res = await fetch('/api/verify-pin', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        ...getStoreHeaders(),
+      },
       body: JSON.stringify({ pin: entered }),
     });
     if (res.ok) {
@@ -349,12 +439,11 @@ export function getStoredTableau2Shifts(): Tableau2ShiftOption[] {
 // SERVER-AUTHORITATIVE MUTATIONS (DIRECT TO DATABASE)
 // ---------------------------------------------------------------------------
 
-/**
- * Fetch authoritative application configuration from Database API
- */
 export async function fetchConfig(): Promise<ConfigData> {
   try {
-    const res = await fetch('/api/config');
+    const res = await fetch('/api/config', {
+      headers: getStoreHeaders(),
+    });
     if (res.ok) {
       const data = await res.json();
       if (data.success && data.config) {
@@ -411,9 +500,6 @@ export async function fetchConfig(): Promise<ConfigData> {
   };
 }
 
-/**
- * Save store name directly to database
- */
 export async function saveStoreName(name: string): Promise<void> {
   const trimmed = (name || '').trim() || DEFAULT_STORE_NAME;
   if (typeof window !== 'undefined') {
@@ -422,7 +508,10 @@ export async function saveStoreName(name: string): Promise<void> {
   try {
     await fetch('/api/config', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        ...getStoreHeaders(),
+      },
       body: JSON.stringify({ storeName: trimmed }),
     });
   } catch (err) {
@@ -430,14 +519,14 @@ export async function saveStoreName(name: string): Promise<void> {
   }
 }
 
-/**
- * Save visible months directly to database
- */
 export async function saveVisibleMonths(months: string[]): Promise<boolean> {
   try {
     const res = await fetch('/api/config', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        ...getStoreHeaders(),
+      },
       body: JSON.stringify({ visibleMonths: months }),
     });
     const data = await res.json();
@@ -457,14 +546,14 @@ export async function saveVisibleMonths(months: string[]): Promise<boolean> {
   return false;
 }
 
-/**
- * Save all planning months directly to database
- */
 export async function saveAllMonths(months: MonthItem[]): Promise<boolean> {
   try {
     const res = await fetch('/api/config', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        ...getStoreHeaders(),
+      },
       body: JSON.stringify({ allMonths: months }),
     });
     const data = await res.json();
@@ -484,15 +573,15 @@ export async function saveAllMonths(months: MonthItem[]): Promise<boolean> {
   return false;
 }
 
-/**
- * Save team employees directly to database
- */
 export async function saveEmployees(employees: Employee[]): Promise<boolean> {
   const sanitized = ensureResponsableAdmin(employees);
   try {
     const res = await fetch('/api/config', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        ...getStoreHeaders(),
+      },
       body: JSON.stringify({ employees: sanitized }),
     });
     const data = await res.json();
@@ -512,9 +601,6 @@ export async function saveEmployees(employees: Employee[]): Promise<boolean> {
   return false;
 }
 
-/**
- * Save stored employees locally in cached config and optionally persist
- */
 export function saveStoredEmployees(employees: Employee[]): void {
   const sanitized = ensureResponsableAdmin(employees);
   if (typeof window !== 'undefined') {
@@ -528,16 +614,16 @@ export function saveStoredEmployees(employees: Employee[]): void {
   }
   fetch('/api/config', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+      ...getStoreHeaders(),
+    },
     body: JSON.stringify({ employees: sanitized }),
   }).catch(() => {
     // Silent catch when offline or in background sync
   });
 }
 
-/**
- * Get stored employees from cached config
- */
 export function getStoredEmployees(): Employee[] {
   const cached = getCachedConfig();
   if (cached && Array.isArray(cached.employees) && cached.employees.length > 0) {
@@ -546,9 +632,6 @@ export function getStoredEmployees(): Employee[] {
   return ensureResponsableAdmin(DEFAULT_EMPLOYEES);
 }
 
-/**
- * Save shift categories directly to database
- */
 export async function saveStoredCategories(categories: ShiftCategoryItem[]): Promise<void> {
   if (typeof window !== 'undefined') {
     localStorage.setItem(KEY_CACHED_CATEGORIES, JSON.stringify(categories));
@@ -556,7 +639,10 @@ export async function saveStoredCategories(categories: ShiftCategoryItem[]): Pro
   try {
     await fetch('/api/config', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        ...getStoreHeaders(),
+      },
       body: JSON.stringify({ categories }),
     });
   } catch (err) {
@@ -564,17 +650,11 @@ export async function saveStoredCategories(categories: ShiftCategoryItem[]): Pro
   }
 }
 
-/**
- * Reset shift categories to defaults directly in database
- */
 export async function resetStoredCategories(): Promise<ShiftCategoryItem[]> {
   await saveStoredCategories(DEFAULT_CATEGORIES);
   return DEFAULT_CATEGORIES;
 }
 
-/**
- * Save customized Tableau 2 shifts directly to database
- */
 export async function saveStoredTableau2Shifts(shifts: Tableau2ShiftOption[]): Promise<void> {
   if (typeof window !== 'undefined') {
     localStorage.setItem(KEY_CACHED_TABLEAU2, JSON.stringify(shifts));
@@ -582,7 +662,10 @@ export async function saveStoredTableau2Shifts(shifts: Tableau2ShiftOption[]): P
   try {
     await fetch('/api/config', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        ...getStoreHeaders(),
+      },
       body: JSON.stringify({ tableau2Shifts: shifts }),
     });
   } catch (err) {
@@ -590,17 +673,11 @@ export async function saveStoredTableau2Shifts(shifts: Tableau2ShiftOption[]): P
   }
 }
 
-/**
- * Reset Tableau 2 shifts to defaults directly in database
- */
 export async function resetStoredTableau2Shifts(): Promise<Tableau2ShiftOption[]> {
   await saveStoredTableau2Shifts(DEFAULT_TABLEAU2_SHIFTS);
   return DEFAULT_TABLEAU2_SHIFTS;
 }
 
-/**
- * Wipe / reset completely all Tableau 2 shifts AND categories
- */
 export async function clearAllTableau2AndCategories(): Promise<{
   shifts: Tableau2ShiftOption[];
   categories: ShiftCategoryItem[];
@@ -610,9 +687,6 @@ export async function clearAllTableau2AndCategories(): Promise<{
   return { shifts: [], categories: [] };
 }
 
-/**
- * Restore complete default examples for Tableau 2 shifts AND categories
- */
 export async function restoreExampleTableau2AndCategories(): Promise<{
   shifts: Tableau2ShiftOption[];
   categories: ShiftCategoryItem[];
@@ -622,13 +696,13 @@ export async function restoreExampleTableau2AndCategories(): Promise<{
   return { shifts: DEFAULT_TABLEAU2_SHIFTS, categories: DEFAULT_CATEGORIES };
 }
 
-/**
- * Reset application to clean state directly on database
- */
 export async function resetToCleanStore(newStoreName?: string): Promise<void> {
   const store = (newStoreName || '').trim() || DEFAULT_STORE_NAME;
   try {
-    await fetch('/api/reset', { method: 'POST' });
+    await fetch('/api/reset', {
+      method: 'POST',
+      headers: getStoreHeaders(),
+    });
     await saveStoreName(store);
   } catch (err) {
     console.error('Failed to reset store on database:', err);
@@ -637,10 +711,12 @@ export async function resetToCleanStore(newStoreName?: string): Promise<void> {
     const tokenVal = localStorage.getItem('planning_token_validated');
     const apiToken = localStorage.getItem('planning_api_token');
     const adminPin = localStorage.getItem('planning_admin_pin');
+    const activeId = localStorage.getItem(KEY_ACTIVE_STORE_ID);
     localStorage.clear();
     if (tokenVal) localStorage.setItem('planning_token_validated', tokenVal);
     if (apiToken) localStorage.setItem('planning_api_token', apiToken);
     if (adminPin) localStorage.setItem('planning_admin_pin', adminPin);
+    if (activeId) localStorage.setItem(KEY_ACTIVE_STORE_ID, activeId);
     localStorage.setItem(KEY_STORE_NAME, store);
   }
 }
@@ -658,7 +734,10 @@ export async function saveStoredDayNotes(
   try {
     await fetch(`/api/notes/${monthKey}`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        ...getStoreHeaders(),
+      },
       body: JSON.stringify({ notes }),
     });
   } catch (err) {
@@ -728,9 +807,10 @@ export async function fetchEmployeeSchedule(
   employeeName: string,
   monthKey: string
 ): Promise<{ schedule: EmployeeMonthSchedule; isOffline: boolean }> {
-  // First check database
   try {
-    const res = await fetch(`/api/schedules/${monthKey}`);
+    const res = await fetch(`/api/schedules/${monthKey}`, {
+      headers: getStoreHeaders(),
+    });
     if (res.ok) {
       const data = await res.json();
       if (data.success && data.schedules && data.schedules[employeeName]) {
@@ -781,7 +861,9 @@ export async function fetchTeamPlanning(
   let dbSchedules: Record<string, EmployeeMonthSchedule> | null = null;
 
   try {
-    const res = await fetch(`/api/schedules/${monthKey}`);
+    const res = await fetch(`/api/schedules/${monthKey}`, {
+      headers: getStoreHeaders(),
+    });
     if (res.ok) {
       const data = await res.json();
       if (data.success && data.schedules) {
@@ -794,7 +876,9 @@ export async function fetchTeamPlanning(
 
   // Also fetch latest day notes
   try {
-    const notesRes = await fetch(`/api/notes/${monthKey}`);
+    const notesRes = await fetch(`/api/notes/${monthKey}`, {
+      headers: getStoreHeaders(),
+    });
     if (notesRes.ok) {
       const notesData = await notesRes.json();
       if (notesData.success && notesData.notes) {
@@ -836,12 +920,11 @@ export async function fetchTeamPlanning(
   return { teamSchedules: result, isOffline: false };
 }
 
-/**
- * Fetch all months schedules from Database and populate cache for annual exercise calculations
- */
 export async function fetchAllSchedules(): Promise<Record<string, Record<string, EmployeeMonthSchedule>> | null> {
   try {
-    const res = await fetch('/api/schedules');
+    const res = await fetch('/api/schedules', {
+      headers: getStoreHeaders(),
+    });
     if (res.ok) {
       const data = await res.json();
       if (data.success && data.schedules) {
@@ -864,9 +947,6 @@ export async function fetchAllSchedules(): Promise<Record<string, Record<string,
   return null;
 }
 
-/**
- * Modify shift and hours DIRECTLY in database
- */
 export async function updateShiftInSheet(
   monthKey: string,
   employeeName: string,
@@ -878,7 +958,10 @@ export async function updateShiftInSheet(
   try {
     const res = await fetch(`/api/schedules/${monthKey}/shift`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        ...getStoreHeaders(),
+      },
       body: JSON.stringify({
         employeeName,
         dateKey,
@@ -893,7 +976,6 @@ export async function updateShiftInSheet(
       throw new Error(data.error || 'Erreur lors de la sauvegarde sur la base de données');
     }
 
-    // Update display cache with authoritative schedule from server
     if (data.schedule && typeof window !== 'undefined') {
       const teamCacheKey = `${CACHE_PREFIX_TEAM}${monthKey}`;
       const rawTeam = localStorage.getItem(teamCacheKey);
@@ -924,11 +1006,13 @@ export async function saveLocalTeamPlanning(
   teamSchedules: Record<string, EmployeeMonthSchedule>,
   updatedEmployees?: Employee[]
 ): Promise<void> {
-  // Save directly to database
   try {
     await fetch(`/api/schedules/${monthKey}`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        ...getStoreHeaders(),
+      },
       body: JSON.stringify({ teamSchedules }),
     });
 
@@ -939,7 +1023,6 @@ export async function saveLocalTeamPlanning(
     console.error('Failed to save team planning to database:', err);
   }
 
-  // Update display cache
   if (typeof window !== 'undefined') {
     localStorage.setItem(`${CACHE_PREFIX_TEAM}${monthKey}`, JSON.stringify(teamSchedules));
     for (const [empName, sched] of Object.entries(teamSchedules)) {
@@ -950,7 +1033,10 @@ export async function saveLocalTeamPlanning(
 
 export async function deleteMonthData(monthKey: string): Promise<void> {
   try {
-    await fetch(`/api/months/${monthKey}`, { method: 'DELETE' });
+    await fetch(`/api/months/${monthKey}`, {
+      method: 'DELETE',
+      headers: getStoreHeaders(),
+    });
   } catch (err) {
     console.error('Error deleting month from database:', err);
   }
@@ -965,7 +1051,9 @@ export async function deleteMonthData(monthKey: string): Promise<void> {
 // ---------------------------------------------------------------------------
 export async function fetchChanges(employeeName: string): Promise<ChangeEntry[]> {
   try {
-    const res = await fetch(`/api/changes/${encodeURIComponent(employeeName)}`);
+    const res = await fetch(`/api/changes/${encodeURIComponent(employeeName)}`, {
+      headers: getStoreHeaders(),
+    });
     if (res.ok) {
       const data = await res.json();
       if (data.success && data.changes) {
@@ -982,6 +1070,7 @@ export async function clearChanges(employeeName: string): Promise<boolean> {
   try {
     const res = await fetch(`/api/changes/${encodeURIComponent(employeeName)}/clear`, {
       method: 'POST',
+      headers: getStoreHeaders(),
     });
     return res.ok;
   } catch {
@@ -991,7 +1080,9 @@ export async function clearChanges(employeeName: string): Promise<boolean> {
 
 export async function fetchHistory(employeeName: string): Promise<HistoryEntry[]> {
   try {
-    const res = await fetch(`/api/history/${encodeURIComponent(employeeName)}`);
+    const res = await fetch(`/api/history/${encodeURIComponent(employeeName)}`, {
+      headers: getStoreHeaders(),
+    });
     if (res.ok) {
       const data = await res.json();
       if (data.success && data.history) {
@@ -1029,7 +1120,6 @@ export async function fetchAvailableShifts(): Promise<Tableau2ShiftOption[]> {
 }
 
 export function renameEmployeeData(oldName: string, newName: string): void {
-  // Display cache update helper
   if (typeof window === 'undefined' || !oldName || !newName || oldName === newName) return;
   try {
     const keysToMigrate: string[] = [];
@@ -1093,4 +1183,148 @@ export function ensureResponsableAdmin(employeesList: Employee[]): Employee[] {
   }
 
   return sanitized;
+}
+
+// ---------------------------------------------------------------------------
+// SUPER-ADMIN / GESTIONNAIRE CLIENT API
+// ---------------------------------------------------------------------------
+export async function superAdminLogin(password: string): Promise<{ success: boolean; error?: string }> {
+  try {
+    const res = await fetch('/api/superadmin/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password }),
+    });
+    const data = await res.json();
+    if (res.ok && data.success) {
+      if (typeof window !== 'undefined') {
+        localStorage.setItem(STORAGE_KEY_SUPERADMIN_SESSION, 'authorized');
+      }
+      return { success: true };
+    }
+    return { success: false, error: data.error || 'Mot de passe incorrect.' };
+  } catch (err: any) {
+    return { success: false, error: err.message || 'Erreur réseau.' };
+  }
+}
+
+export async function superAdminGetStores(): Promise<{
+  success: boolean;
+  stores: Array<{
+    id: string;
+    name: string;
+    token: string;
+    adminPin: string;
+    createdAt: string;
+    dataFile: string;
+    stats?: {
+      totalEmployees: number;
+      totalMonths: number;
+      totalChanges: number;
+      lastSavedAt: string | null;
+    };
+  }>;
+  error?: string;
+}> {
+  try {
+    const res = await fetch('/api/superadmin/stores');
+    const data = await res.json();
+    if (res.ok && data.success) {
+      return { success: true, stores: data.stores };
+    }
+    return { success: false, stores: [], error: data.error };
+  } catch (err: any) {
+    return { success: false, stores: [], error: err.message };
+  }
+}
+
+export async function superAdminCreateStore(
+  name: string,
+  token: string,
+  adminPin?: string
+): Promise<{ success: boolean; store?: any; error?: string }> {
+  try {
+    const res = await fetch('/api/superadmin/stores', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, token, adminPin }),
+    });
+    const data = await res.json();
+    if (res.ok && data.success) {
+      return { success: true, store: data.store };
+    }
+    return { success: false, error: data.error || 'Erreur lors de la création du magasin.' };
+  } catch (err: any) {
+    return { success: false, error: err.message || 'Erreur réseau.' };
+  }
+}
+
+export async function superAdminUpdateStore(
+  storeId: string,
+  updates: { name?: string; token?: string; adminPin?: string }
+): Promise<{ success: boolean; store?: any; error?: string }> {
+  try {
+    const res = await fetch(`/api/superadmin/stores/${storeId}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(updates),
+    });
+    const data = await res.json();
+    if (res.ok && data.success) {
+      return { success: true, store: data.store };
+    }
+    return { success: false, error: data.error || 'Erreur lors de la mise à jour.' };
+  } catch (err: any) {
+    return { success: false, error: err.message || 'Erreur réseau.' };
+  }
+}
+
+export async function superAdminDeleteStore(storeId: string): Promise<{ success: boolean; error?: string }> {
+  try {
+    const res = await fetch(`/api/superadmin/stores/${storeId}`, {
+      method: 'DELETE',
+    });
+    const data = await res.json();
+    if (res.ok && data.success) {
+      return { success: true };
+    }
+    return { success: false, error: data.error || 'Erreur lors de la suppression.' };
+  } catch (err: any) {
+    return { success: false, error: err.message || 'Erreur réseau.' };
+  }
+}
+
+export async function superAdminRestoreStore(
+  storeId: string,
+  backupData: any
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const res = await fetch(`/api/superadmin/stores/${storeId}/restore`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(backupData),
+    });
+    const data = await res.json();
+    if (res.ok && data.success) {
+      return { success: true };
+    }
+    return { success: false, error: data.error || 'Erreur lors de la restauration.' };
+  } catch (err: any) {
+    return { success: false, error: err.message || 'Erreur réseau.' };
+  }
+}
+
+export async function superAdminResetStore(storeId: string): Promise<{ success: boolean; error?: string }> {
+  try {
+    const res = await fetch(`/api/superadmin/stores/${storeId}/reset`, {
+      method: 'POST',
+    });
+    const data = await res.json();
+    if (res.ok && data.success) {
+      return { success: true };
+    }
+    return { success: false, error: data.error || 'Erreur lors de la réinitialisation.' };
+  } catch (err: any) {
+    return { success: false, error: err.message || 'Erreur réseau.' };
+  }
 }

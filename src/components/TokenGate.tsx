@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
-import { verifyApiToken, setApiToken } from '../services/api';
-import { KeyRound, ShieldCheck, ArrowRight, AlertCircle, Eye, EyeOff } from 'lucide-react';
+import { verifyApiTokenWithStore, setApiToken, setActiveStore } from '../services/api';
+import { KeyRound, ShieldCheck, ArrowRight, AlertCircle, Eye, EyeOff, Lock, Store } from 'lucide-react';
+import { SuperAdminModal } from './SuperAdminModal';
 
 interface TokenGateProps {
   storeName?: string;
   infoMessage?: string;
-  onTokenSuccess: (token: string) => void;
+  onTokenSuccess: (token: string, store?: { id: string; name: string; token: string }) => void;
 }
 
 export const TokenGate: React.FC<TokenGateProps> = ({ storeName, infoMessage, onTokenSuccess }) => {
@@ -13,6 +14,7 @@ export const TokenGate: React.FC<TokenGateProps> = ({ storeName, infoMessage, on
   const [showToken, setShowToken] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const [isValidating, setIsValidating] = useState(false);
+  const [isSuperAdminOpen, setIsSuperAdminOpen] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -26,19 +28,28 @@ export const TokenGate: React.FC<TokenGateProps> = ({ storeName, infoMessage, on
     setIsValidating(true);
     setErrorMessage('');
 
-    // Validation via base de données du serveur
-    const isValid = await verifyApiToken(entered);
+    // Validation via base de données du serveur avec identification automatique du magasin
+    const result = await verifyApiTokenWithStore(entered);
 
-    if (isValid) {
+    if (result.valid) {
       setApiToken(entered);
+      if (result.store) {
+        setActiveStore(result.store);
+      }
       setTimeout(() => {
         setIsValidating(false);
-        onTokenSuccess(entered);
+        onTokenSuccess(entered, result.store);
       }, 200);
     } else {
       setIsValidating(false);
-      setErrorMessage("Clé d'accès incorrecte.");
+      setErrorMessage("Clé d'accès incorrecte. Vérifiez auprès de votre responsable.");
     }
+  };
+
+  const handleSwitchToStoreFromSuperAdmin = (store: { id: string; name: string; token: string }) => {
+    setActiveStore(store);
+    setApiToken(store.token);
+    onTokenSuccess(store.token, store);
   };
 
   return (
@@ -47,7 +58,7 @@ export const TokenGate: React.FC<TokenGateProps> = ({ storeName, infoMessage, on
       <div className="absolute -top-24 -left-24 w-96 h-96 bg-emerald-600/20 rounded-full blur-3xl pointer-events-none" />
       <div className="absolute -bottom-24 -right-24 w-96 h-96 bg-emerald-800/25 rounded-full blur-3xl pointer-events-none" />
 
-      <div className="w-full max-w-sm z-10 space-y-6">
+      <div className="w-full max-w-sm z-10 space-y-5">
         {/* App Brand Header */}
         <div className="text-center space-y-2">
           <div className="w-16 h-16 rounded-2xl bg-emerald-700/80 border border-emerald-500/40 text-white flex items-center justify-center mx-auto shadow-lg shadow-emerald-900/50">
@@ -66,7 +77,7 @@ export const TokenGate: React.FC<TokenGateProps> = ({ storeName, infoMessage, on
             </svg>
           </div>
           <h1 className="text-xl font-bold tracking-tight text-white">
-            {storeName || 'Planning'}
+            {storeName || 'Portail Plannings'}
           </h1>
           <p className="text-xs text-emerald-200/80 font-medium">
             Planning du Personnel & Équipe
@@ -74,17 +85,17 @@ export const TokenGate: React.FC<TokenGateProps> = ({ storeName, infoMessage, on
         </div>
 
         {/* Card */}
-        <div className="bg-white rounded-2xl p-6 shadow-2xl border border-slate-100 space-y-5">
+        <div className="bg-white rounded-3xl p-6 shadow-2xl border border-slate-100 space-y-5">
           <div className="text-center space-y-1">
             <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-800 text-[11px] font-semibold mb-1">
               <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
-              <span>Accès Sécurisé Équipe</span>
+              <span>Accès Sécurisé Magasin</span>
             </div>
             <h2 className="text-base font-bold text-slate-900">
               Clé d'accès requise
             </h2>
             <p className="text-xs text-slate-500 leading-relaxed">
-              Pour accéder aux plannings, saisissez votre clé d'accès (Clé initiale : <span className="font-mono font-bold text-emerald-800 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200">PLANNING</span>).
+              Saisissez la clé d'accès de votre établissement pour charger automatiquement son planning.
             </p>
           </div>
 
@@ -130,9 +141,6 @@ export const TokenGate: React.FC<TokenGateProps> = ({ storeName, infoMessage, on
                     <AlertCircle className="w-3.5 h-3.5 shrink-0" />
                     <span>{errorMessage}</span>
                   </div>
-                  <p className="text-[11px] text-slate-500">
-                    Saisissez la clé neutre par défaut : <strong className="font-mono text-emerald-800">PLANNING</strong>
-                  </p>
                 </div>
               )}
             </div>
@@ -140,7 +148,7 @@ export const TokenGate: React.FC<TokenGateProps> = ({ storeName, infoMessage, on
             <button
               type="submit"
               disabled={isValidating || !tokenInput.trim()}
-              className="w-full py-3 px-4 rounded-xl text-xs font-bold text-white bg-emerald-700 hover:bg-emerald-800 disabled:opacity-50 transition-all flex items-center justify-center gap-2 shadow-md hover:shadow-lg active:scale-[0.98]"
+              className="w-full py-3 px-4 rounded-xl text-xs font-bold text-white bg-emerald-700 hover:bg-emerald-800 disabled:opacity-50 transition-all flex items-center justify-center gap-2 shadow-md hover:shadow-lg active:scale-[0.98] cursor-pointer"
             >
               {isValidating ? (
                 <span>Vérification...</span>
@@ -153,13 +161,29 @@ export const TokenGate: React.FC<TokenGateProps> = ({ storeName, infoMessage, on
             </button>
           </form>
 
-          <div className="pt-2 border-t border-slate-100 text-center">
-            <p className="text-[11px] text-slate-400 flex items-center justify-center gap-1">
-              <span>Ce jeton sera mémorisé sur cet appareil</span>
+          {/* Super-Admin Direct Entry Point */}
+          <div className="pt-3 border-t border-slate-100 flex flex-col items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setIsSuperAdminOpen(true)}
+              className="w-full py-2.5 px-3 rounded-xl border border-slate-200 hover:border-slate-300 bg-slate-50 hover:bg-slate-100/80 text-slate-700 text-xs font-bold flex items-center justify-center gap-2 transition-all cursor-pointer shadow-2xs"
+            >
+              <Lock className="w-3.5 h-3.5 text-slate-600" />
+              <span>Espace Gestionnaire Multi-Magasins</span>
+            </button>
+            <p className="text-[10px] text-slate-400 text-center">
+              Accès protégé par mot de passe .env (Réseau & Multi-Boutiques)
             </p>
           </div>
         </div>
       </div>
+
+      {/* Super Admin Modal */}
+      <SuperAdminModal
+        isOpen={isSuperAdminOpen}
+        onClose={() => setIsSuperAdminOpen(false)}
+        onSwitchToStore={handleSwitchToStoreFromSuperAdmin}
+      />
     </div>
   );
 };

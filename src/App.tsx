@@ -259,15 +259,38 @@ export default function App() {
   }, [isTokenValidated]);
 
   // Handle successful token validation
-  const handleTokenSuccess = (token: string) => {
+  const handleTokenSuccess = (token: string, store?: { id: string; name: string; token: string }) => {
     localStorage.setItem(STORAGE_KEY_TOKEN_VALIDATED, 'true');
     setTokenRevokedMessage('');
     setIsTokenValidated(true);
 
-    const savedEmpName = localStorage.getItem(STORAGE_KEY_EMPLOYEE);
-    if (!savedEmpName) {
-      setIsProfileModalOpen(true);
+    if (store && store.name) {
+      setStoreName(store.name);
     }
+
+    // Immediately fetch latest store config & schedules for this specific store
+    fetchConfig().then((cfg) => {
+      if (cfg) {
+        if (cfg.storeName) setStoreName(cfg.storeName);
+        if (cfg.employees) {
+          const emps = ensureResponsableAdmin(cfg.employees);
+          setEmployees(emps);
+          const savedEmpName = localStorage.getItem(STORAGE_KEY_EMPLOYEE);
+          const match = savedEmpName
+            ? emps.find((e: Employee) => e.name.toLowerCase() === savedEmpName.toLowerCase())
+            : null;
+          if (match) {
+            setCurrentEmployee(match);
+          } else {
+            setCurrentEmployee(emps[0] || null);
+            setIsProfileModalOpen(true);
+          }
+        }
+        if (cfg.visibleMonths) setVisibleMonths(cfg.visibleMonths);
+        if (cfg.allMonths) setAllMonths(cfg.allMonths);
+      }
+      fetchAllSchedules();
+    });
   };
 
   // Lock and return to token gate

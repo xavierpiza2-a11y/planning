@@ -36,7 +36,15 @@ fi
 mkdir -p "$APP_DIR/data"
 chmod 777 "$APP_DIR/data"
 
-# 4. Configuration optionnelle du pare-feu
+# 4. Configuration du fichier d'environnement (.env)
+if [ ! -f "$APP_DIR/.env" ] && [ -f "$APP_DIR/.env.example" ]; then
+  echo "⚙️ Initialisation du fichier .env à partir de .env.example..."
+  cp "$APP_DIR/.env.example" "$APP_DIR/.env"
+  echo "⚠️ Important : Pensez à éditer le fichier .env pour définir votre mot de passe Super-Admin personnalisé :"
+  echo "   nano .env"
+fi
+
+# 5. Configuration optionnelle du pare-feu
 if command -v ufw &> /dev/null && ufw status | grep -q "Status: active"; then
   echo "🛡️ Ouverture du port 3000 dans le pare-feu..."
   ufw allow 3000/tcp || true

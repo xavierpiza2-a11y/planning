@@ -58,18 +58,24 @@ Ouvrez votre terminal (ou PuTTY / PowerShell sur Windows) :
 ssh votre_nom_utilisateur@192.168.1.50
 ```
 
-### 1.4 Lancement en 1 seule commande
+### 1.4 Configuration et Lancement en 1 seule commande
 Copiez le code du projet sur la machine :
 ```bash
 git clone <votre_depot> planning-app
 cd planning-app
 ```
 
+Créez votre fichier d'environnement `.env` à partir de l'exemple et personnalisez votre mot de passe Super-Admin :
+```bash
+cp .env.example .env
+nano .env   # Définissez votre SUPER_ADMIN_PASSWORD
+```
+
 Exécutez le script d'installation automatique :
 ```bash
 sudo bash install-freebox.sh
 ```
-Ce script installe Docker automatiquement si nécessaire, crée le volume de données `./data` et démarre le conteneur via Docker Compose.
+Ce script installe Docker automatiquement si nécessaire, initialise `.env` si absent, crée le volume de données `./data` et démarre le conteneur via Docker Compose.
 
 L'application est immédiatement accessible sur votre réseau local :
 ```
@@ -99,15 +105,21 @@ http://192.168.1.50:3000
 
 ---
 
-# 2. Moteur de Stockage Autonome & Sauvegardes
+# 2. Moteur de Stockage Autonome Multi-Magasins & Sauvegardes
 
-### 2.1 Stockage persistant sans base de données externe
-- Toutes les données (configurations du magasin, salariés, créneaux du Tableau 2, plannings mensuels, notes du jour, journal des modifications) sont stockées dans le fichier :
+### 2.1 Isolation stricte des magasins et persistance des données
+- Chaque magasin dispose de son propre fichier de base de données isolé :
   ```
-  ./data/planning_db.json
+  ./data/stores/store_<id>.json
   ```
+- Le registre centralisé des magasins et de leurs clés de sécurité d'accès se trouve dans :
+  ```
+  ./data/stores.json
+  ```
+- **Sécurité et Mot de passe Super-Admin** :
+  L'accès au panneau de gestion de l'ensemble des magasins est protégé par le mot de passe défini dans votre fichier `.env` (`SUPER_ADMIN_PASSWORD`). **Aucun mot de passe par défaut n'est codé en dur dans le code source de l'application.**
 - **Écriture atomique sécurisée** : Les écritures passent d'abord par un fichier temporaire avant d'être permutées instantanément, ce qui élimine tout risque de corruption de données en cas de coupure de courant ou de redémarrage inattendu.
-- **Volume Docker** : Le dossier `./data` est monté en volume externe. Une mise à jour ou reconstruction du conteneur Docker préserve 100% de vos plannings.
+- **Volume Docker** : Le dossier `./data` est monté en volume externe. Une mise à jour ou reconstruction du conteneur Docker préserve 100% de vos magasins et plannings.
 
 ### 2.2 Synchronisation WebSocket en direct
 - Dès qu'un responsable modifie un horaire, ajoute une note ou publie un planning, le serveur envoie immédiatement l'événement à tous les téléphones et navigateurs connectés via WebSockets (`/ws`).

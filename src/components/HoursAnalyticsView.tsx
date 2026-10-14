@@ -34,7 +34,6 @@ import {
   RefreshCw,
   Award,
   Scale,
-  Palmtree,
 } from 'lucide-react';
 
 interface HoursAnalyticsViewProps {
@@ -137,15 +136,12 @@ export const HoursAnalyticsView: React.FC<HoursAnalyticsViewProps> = ({
       const schedule = getEmployeeSchedule(emp.name);
       let calculatedHours = 0;
       let restDays = 0;
-      let leaveDays = 0;
 
       if (schedule?.days) {
         Object.values(schedule.days).forEach((day) => {
           const cat = categorizeShift(day.shift, day.hours);
           if (cat === 'REPOS') {
             restDays++;
-          } else if (cat === 'CONGES' || cat === 'RTT') {
-            leaveDays++;
           }
           calculatedHours += parseHoursFromDay(day.shift, day.hours);
         });
@@ -174,7 +170,6 @@ export const HoursAnalyticsView: React.FC<HoursAnalyticsViewProps> = ({
         color,
         totalHours,
         restDays,
-        leaveDays,
         isSynchronized,
         schedule,
         balances,
@@ -185,11 +180,9 @@ export const HoursAnalyticsView: React.FC<HoursAnalyticsViewProps> = ({
   // Aggregate Team Totals
   const teamAggregate = useMemo(() => {
     let totalHours = 0;
-    let totalLeaveDays = 0;
 
     teamEmployeesStats.forEach((st) => {
       totalHours += st.totalHours;
-      totalLeaveDays += st.leaveDays;
     });
 
     const activeEmpCount = teamEmployeesStats.filter((st) => st.totalHours > 0).length || employees.length || 1;
@@ -197,7 +190,6 @@ export const HoursAnalyticsView: React.FC<HoursAnalyticsViewProps> = ({
 
     return {
       totalHours: Math.round(totalHours * 10) / 10,
-      totalLeaveDays,
       activeEmpCount,
       avgHoursPerEmployee,
     };
@@ -336,7 +328,7 @@ export const HoursAnalyticsView: React.FC<HoursAnalyticsViewProps> = ({
       {mainMode === 'team' && (
         <div className="space-y-4">
           {/* Team KPI Cards */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
             <div className="bg-white rounded-2xl border border-slate-200/90 p-3.5 shadow-2xs">
               <div className="flex items-center gap-1.5 text-[11px] font-semibold text-emerald-800 uppercase tracking-wider mb-1">
                 <Clock className="w-3.5 h-3.5 text-emerald-600" />
@@ -362,20 +354,6 @@ export const HoursAnalyticsView: React.FC<HoursAnalyticsViewProps> = ({
               </div>
               <p className="text-[10px] text-slate-500 mt-0.5">
                 Base du mois : {standardMonthBaseHours}h ({monthWorkingCal.netWorkingDays}j ouvrés)
-              </p>
-            </div>
-
-            <div className="bg-white rounded-2xl border border-slate-200/90 p-3.5 shadow-2xs">
-              <div className="flex items-center gap-1.5 text-[11px] font-semibold text-amber-800 uppercase tracking-wider mb-1">
-                <Palmtree className="w-3.5 h-3.5 text-amber-600" />
-                <span>Congés Posés Mois</span>
-              </div>
-              <div className="text-2xl font-black text-slate-900 tabular-nums">
-                {teamAggregate.totalLeaveDays}
-                <span className="text-sm font-bold text-amber-600 ml-0.5">j</span>
-              </div>
-              <p className="text-[10px] text-slate-500 mt-0.5">
-                Sur le mois de {monthLabel}
               </p>
             </div>
 
