@@ -529,7 +529,7 @@ export const HoursAnalyticsView: React.FC<HoursAnalyticsViewProps> = ({
                                   </div>
                                   {data.balances?.hasAnnualHoursCounter && (
                                     <div className="flex items-center justify-between text-[11px]">
-                                      <span className="text-slate-400">Écart année :</span>
+                                      <span className="text-slate-400">Écart à la Fin du Mois :</span>
                                       <span
                                         className={`font-semibold tabular-nums ${
                                           (data.balances?.exerciseBalance ?? 0) >= 0 ? 'text-sky-400' : 'text-amber-400'
