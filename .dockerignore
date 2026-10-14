@@ -3,5 +3,8 @@ dist
 data
 .git
 .gitignore
+.env
+.env.*
+!.env.example
 *.md
 *.txt
