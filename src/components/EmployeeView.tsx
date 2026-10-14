@@ -446,7 +446,6 @@ export const EmployeeView: React.FC<EmployeeViewProps> = ({
           </span>
           <span className="flex items-center gap-2">
             <span>Régime : <strong className="text-slate-700">{employeeBalances.contractLabel}</strong></span>
-            <span>· CP restants : <strong className="text-amber-700">{employeeBalances.paidLeaveRemaining}j</strong></span>
             {employeeBalances.rttTotal > 0 && (
               <span>· RTT restants : <strong className="text-teal-700">{employeeBalances.rttRemaining}j</strong></span>
             )}

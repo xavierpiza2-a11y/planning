@@ -26,6 +26,9 @@ import {
   dbGetChanges,
   dbClearChanges,
   dbGetHistory,
+  dbGetAllHistory,
+  dbClearEmployeeHistory,
+  dbClearAllHistory,
   dbResetToCleanStore,
   dbGetFullBackup,
   dbRestoreBackup,
@@ -555,12 +558,73 @@ app.post('/api/changes/:employeeName/clear', async (req, res) => {
 });
 
 // 7. History
+app.get('/api/history', async (req, res) => {
+  try {
+    const storeId = resolveStoreId(req);
+    const result = await dbGetAllHistory(storeId);
+    res.json({
+      success: true,
+      storeId,
+      records: result.records,
+      count: result.count,
+      byEmployee: result.byEmployee,
+    });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
 app.get('/api/history/:employeeName', async (req, res) => {
   try {
     const storeId = resolveStoreId(req);
     const { employeeName } = req.params;
     const history = await dbGetHistory(storeId, employeeName);
     res.json({ success: true, storeId, employeeName, history });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// Supprimer tout l'historique de modification du magasin
+app.delete('/api/history', async (req, res) => {
+  try {
+    const storeId = resolveStoreId(req);
+    const deletedCount = await dbClearAllHistory(storeId);
+    broadcast({
+      type: 'HISTORY_CLEARED',
+      storeId,
+      deletedCount,
+    });
+    res.json({
+      success: true,
+      storeId,
+      deletedCount,
+      message: 'Tout l\'historique des modifications a été purgé avec succès.',
+    });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// Supprimer l'historique de modification d'un salarié spécifique
+app.delete('/api/history/:employeeName', async (req, res) => {
+  try {
+    const storeId = resolveStoreId(req);
+    const { employeeName } = req.params;
+    const deletedCount = await dbClearEmployeeHistory(storeId, employeeName);
+    broadcast({
+      type: 'EMPLOYEE_HISTORY_CLEARED',
+      storeId,
+      employeeName,
+      deletedCount,
+    });
+    res.json({
+      success: true,
+      storeId,
+      employeeName,
+      deletedCount,
+      message: `L'historique de ${employeeName} a été supprimé (${deletedCount} entrées).`,
+    });
   } catch (err: any) {
     res.status(500).json({ success: false, error: err.message });
   }

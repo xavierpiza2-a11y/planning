@@ -91,6 +91,7 @@ export interface ChangeEntry {
 }
 
 export interface HistoryEntry {
+  id?: string;
   date: string;
   employee: string;
   change: string;

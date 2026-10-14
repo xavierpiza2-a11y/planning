@@ -291,7 +291,7 @@ export const SuperAdminModal: React.FC<SuperAdminModalProps> = ({
               Espace Administration Multi-Magasins
             </h2>
             <p className="text-xs text-slate-500 leading-relaxed max-w-xs mx-auto">
-              Saisissez le mot de passe Super-Administrateur défini dans la configuration serveur (.env).
+              Saisissez le mot de passe Super-Administrateur.
             </p>
           </div>
 
@@ -304,7 +304,7 @@ export const SuperAdminModal: React.FC<SuperAdminModalProps> = ({
                 <input
                   type={showPassword ? 'text' : 'password'}
                   autoFocus
-                  placeholder="Mot de passe (.env)"
+                  placeholder="Mot de passe"
                   value={passwordInput}
                   onChange={(e) => {
                     setPasswordInput(e.target.value);
@@ -346,7 +346,7 @@ export const SuperAdminModal: React.FC<SuperAdminModalProps> = ({
 
           <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl text-[11px] text-slate-500 leading-relaxed">
             <p className="font-semibold text-slate-700 mb-0.5">Sécurité d'accès garantie :</p>
-            Ce mot de passe est modifiable exclusivement sur le serveur dans le fichier <code className="font-mono bg-slate-200 px-1 py-0.5 rounded text-slate-800">.env</code> via la variable <code className="font-mono bg-slate-200 px-1 py-0.5 rounded text-slate-800">SUPER_ADMIN_PASSWORD</code>.
+            Ce mot de passe est modifiable exclusivement sur le serveur.
           </div>
         </div>
       ) : (
@@ -404,13 +404,13 @@ export const SuperAdminModal: React.FC<SuperAdminModalProps> = ({
 
           {/* Info Ribbon */}
           <div className="bg-emerald-950/40 border-b border-emerald-900/30 px-5 py-2.5 flex items-center justify-between text-xs text-emerald-300 flex-wrap gap-2">
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2" style={{ color: '#2a5e4b' }}>
               <Database className="w-4 h-4 text-emerald-400 shrink-0" />
               <span>
                 <strong>{stores.length} magasin(s) configuré(s)</strong> — Chaque magasin dispose de son propre fichier de sauvegarde indépendant dans <code className="font-mono text-white bg-emerald-900/50 px-1 py-0.5 rounded text-[11px]">./data/stores/</code>.
               </span>
             </div>
-            <div className="text-[11px] text-emerald-400/80">
+            <div className="text-[11px] text-emerald-400/80" style={{ color: '#244b3f' }}>
               Protection : <strong>SUPER_ADMIN_PASSWORD (.env)</strong>
             </div>
           </div>
@@ -465,7 +465,7 @@ export const SuperAdminModal: React.FC<SuperAdminModalProps> = ({
                             className="p-1.5 rounded-lg text-slate-400 hover:text-emerald-700 hover:bg-emerald-50 transition-colors"
                             title="Modifier ce magasin"
                           >
-                            <Edit2 className="w-4 h-4" />
+                            <Edit2 className="w-4 h-4" style={{ color: '#e1190c' }} />
                           </button>
 
                           {stores.length > 1 && (

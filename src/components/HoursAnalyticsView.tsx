@@ -418,10 +418,6 @@ export const HoursAnalyticsView: React.FC<HoursAnalyticsViewProps> = ({
                   <span>Répartition %</span>
                 </button>
               </div>
-
-              <span className="text-[11px] font-medium text-slate-400">
-                Graphique interactif Recharts
-              </span>
             </div>
 
             {/* TEAM CHART 1: Comparative BarChart of Employees */}

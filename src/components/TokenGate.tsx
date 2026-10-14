@@ -80,7 +80,7 @@ export const TokenGate: React.FC<TokenGateProps> = ({ storeName, infoMessage, on
             {storeName || 'Portail Plannings'}
           </h1>
           <p className="text-xs text-emerald-200/80 font-medium">
-            Planning du Personnel & Équipe
+            Application de gestion d'équipe. By Xavier
           </p>
         </div>
 
@@ -172,7 +172,7 @@ export const TokenGate: React.FC<TokenGateProps> = ({ storeName, infoMessage, on
               <span>Espace Gestionnaire Multi-Magasins</span>
             </button>
             <p className="text-[10px] text-slate-400 text-center">
-              Accès protégé par mot de passe .env (Réseau & Multi-Boutiques)
+              Accès protégé par mot de passe (Réseau & Multi-Boutiques)
             </p>
           </div>
         </div>

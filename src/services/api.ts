@@ -201,6 +201,25 @@ if (typeof window !== 'undefined') {
         notifyDataChange('STORE_RESET', msg);
         break;
       }
+      case 'HISTORY_CLEARED': {
+        if (typeof window !== 'undefined') {
+          for (let i = localStorage.length - 1; i >= 0; i--) {
+            const k = localStorage.key(i);
+            if (k && k.startsWith(KEY_HISTORY_PREFIX)) {
+              localStorage.removeItem(k);
+            }
+          }
+        }
+        notifyDataChange('HISTORY_CLEARED', msg);
+        break;
+      }
+      case 'EMPLOYEE_HISTORY_CLEARED': {
+        if (typeof window !== 'undefined' && msg.employeeName) {
+          localStorage.removeItem(`${KEY_HISTORY_PREFIX}${msg.employeeName.toLowerCase()}`);
+        }
+        notifyDataChange('EMPLOYEE_HISTORY_CLEARED', msg);
+        break;
+      }
     }
   });
 }
@@ -1093,6 +1112,63 @@ export async function fetchHistory(employeeName: string): Promise<HistoryEntry[]
     // fallback
   }
   return [];
+}
+
+export async function fetchAllHistory(): Promise<{
+  records: HistoryEntry[];
+  count: number;
+  byEmployee: Record<string, number>;
+}> {
+  try {
+    const res = await fetch('/api/history', {
+      headers: getStoreHeaders(),
+    });
+    if (res.ok) {
+      const data = await res.json();
+      if (data.success) {
+        return {
+          records: data.records || [],
+          count: data.count || 0,
+          byEmployee: data.byEmployee || {},
+        };
+      }
+    }
+  } catch (err) {
+    console.error('Error fetching all history:', err);
+  }
+  return { records: [], count: 0, byEmployee: {} };
+}
+
+export async function deleteAllHistory(): Promise<{ success: boolean; count: number; error?: string }> {
+  try {
+    const res = await fetch('/api/history', {
+      method: 'DELETE',
+      headers: getStoreHeaders(),
+    });
+    const data = await res.json();
+    if (res.ok && data.success) {
+      return { success: true, count: data.deletedCount || 0 };
+    }
+    return { success: false, count: 0, error: data.error || 'Erreur lors de la suppression' };
+  } catch (err: any) {
+    return { success: false, count: 0, error: err.message };
+  }
+}
+
+export async function deleteEmployeeHistory(employeeName: string): Promise<{ success: boolean; count: number; error?: string }> {
+  try {
+    const res = await fetch(`/api/history/${encodeURIComponent(employeeName)}`, {
+      method: 'DELETE',
+      headers: getStoreHeaders(),
+    });
+    const data = await res.json();
+    if (res.ok && data.success) {
+      return { success: true, count: data.deletedCount || 0 };
+    }
+    return { success: false, count: 0, error: data.error || 'Erreur lors de la suppression' };
+  } catch (err: any) {
+    return { success: false, count: 0, error: err.message };
+  }
 }
 
 export function recordChange(

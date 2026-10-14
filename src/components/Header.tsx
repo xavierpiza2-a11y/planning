@@ -70,9 +70,6 @@ export const Header: React.FC<HeaderProps> = ({
                 {isRealtimeConnected ? 'Direct' : 'Sync'}
               </span>
             </div>
-            <p className="text-[11px] text-emerald-200/80 leading-tight truncate">
-              Planning Équipe · Base de données
-            </p>
           </div>
         </div>
 

@@ -713,6 +713,62 @@ export async function dbGetHistory(storeId: string, employeeName: string): Promi
   return db.history[key] || [];
 }
 
+export async function dbGetAllHistory(storeId: string): Promise<{
+  records: HistoryRecord[];
+  count: number;
+  byEmployee: Record<string, number>;
+}> {
+  const db = getStoreDb(storeId);
+  const records: HistoryRecord[] = [];
+  const byEmployee: Record<string, number> = {};
+
+  for (const [empKey, list] of Object.entries(db.history || {})) {
+    if (Array.isArray(list) && list.length > 0) {
+      records.push(...list);
+      const empDisplayName = list[0]?.employee || empKey;
+      byEmployee[empDisplayName] = (byEmployee[empDisplayName] || 0) + list.length;
+    }
+  }
+
+  records.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+  return {
+    records,
+    count: records.length,
+    byEmployee,
+  };
+}
+
+export async function dbClearEmployeeHistory(storeId: string, employeeName: string): Promise<number> {
+  const db = getStoreDb(storeId);
+  const targetKey = (employeeName || '').toLowerCase().trim();
+  let deletedCount = 0;
+
+  for (const k of Object.keys(db.history || {})) {
+    if (k.toLowerCase().trim() === targetKey) {
+      deletedCount += (db.history[k] || []).length;
+      delete db.history[k];
+    }
+  }
+
+  saveStoreDataFile(storeId);
+  return deletedCount;
+}
+
+export async function dbClearAllHistory(storeId: string): Promise<number> {
+  const db = getStoreDb(storeId);
+  let deletedCount = 0;
+
+  for (const list of Object.values(db.history || {})) {
+    if (Array.isArray(list)) {
+      deletedCount += list.length;
+    }
+  }
+
+  db.history = {};
+  saveStoreDataFile(storeId);
+  return deletedCount;
+}
+
 export async function dbRecordHistory(
   storeId: string,
   employee: string,
