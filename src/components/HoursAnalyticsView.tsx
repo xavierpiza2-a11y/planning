@@ -529,7 +529,7 @@ export const HoursAnalyticsView: React.FC<HoursAnalyticsViewProps> = ({
                                   </div>
                                   {data.balances?.hasAnnualHoursCounter && (
                                     <div className="flex items-center justify-between text-[11px]">
-                                      <span className="text-slate-400">Écart à la Fin du Mois :</span>
+                                      <span className="text-slate-400">Écart Cumulé à la Fin du Mois :</span>
                                       <span
                                         className={`font-semibold tabular-nums ${
                                           (data.balances?.exerciseBalance ?? 0) >= 0 ? 'text-sky-400' : 'text-amber-400'
@@ -798,7 +798,7 @@ export const HoursAnalyticsView: React.FC<HoursAnalyticsViewProps> = ({
                             <>
                               <span aria-hidden="true">·</span>
                               <span className={st.balances.exerciseBalance > 0 ? 'text-sky-700 font-bold' : st.balances.exerciseBalance < 0 ? 'text-amber-700 font-bold' : 'text-slate-600'}>
-                                Année : {st.balances.exerciseBalance > 0 ? `+${st.balances.exerciseBalance}h (dû salarié)` : st.balances.exerciseBalance < 0 ? `${st.balances.exerciseBalance}h (dû magasin)` : '0h (équilibré)'}
+                                Ecart Cumulé à la Fin du Mois : {st.balances.exerciseBalance > 0 ? `+${st.balances.exerciseBalance}h (dû salarié)` : st.balances.exerciseBalance < 0 ? `${st.balances.exerciseBalance}h (dû magasin)` : '0h (équilibré)'}
                               </span>
                             </>
                           ) : null}

@@ -425,7 +425,7 @@ export const HoursChart: React.FC<HoursChartProps> = ({
 
                 <div className="bg-white/80 rounded-lg p-2 border border-slate-200/60 shadow-2xs">
                   <span className="text-[10px] font-medium text-slate-500 uppercase tracking-wider block">
-                    Écart à la Fin du Mois
+                    Écart Cumulé à la Fin du Mois
                   </span>
                   <span
                     className={`text-xs sm:text-sm font-bold tabular-nums ${
@@ -487,7 +487,7 @@ export const HoursChart: React.FC<HoursChartProps> = ({
 
                 <div className="bg-white/80 rounded-lg p-2 border border-slate-200/60 shadow-2xs">
                   <span className="text-[10px] font-medium text-slate-500 uppercase tracking-wider block">
-                    Écart à la Fin du Mois
+                    Écart Cumulé à la Fin du Mois
                   </span>
                   <span
                     className={`text-xs sm:text-sm font-bold tabular-nums ${

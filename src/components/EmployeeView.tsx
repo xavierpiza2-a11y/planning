@@ -407,7 +407,7 @@ export const EmployeeView: React.FC<EmployeeViewProps> = ({
               <div className="bg-white rounded-xl border border-slate-200 p-2.5 text-center shadow-xs">
                 <div className="text-[10px] uppercase font-semibold text-slate-500 tracking-wider flex items-center justify-center gap-1 mb-1">
                   <Scale className="w-3 h-3 text-emerald-600" />
-                  <span>Écart à la Fin du Mois</span>
+                  <span>Écart Cumulé à la Fin du Mois</span>
                 </div>
                 <p
                   className={`text-base sm:text-lg font-bold tabular-nums ${
