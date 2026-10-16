@@ -13,17 +13,17 @@ export const PWAInstallBanner: React.FC = () => {
   if (!isInstallable && !isIOS && !isHttpExternal) return null;
 
   return (
-    <div className="bg-emerald-900 text-white px-4 py-2.5 shadow-md flex items-center justify-between gap-3 text-xs border-b border-emerald-950">
+    <div className="bg-slate-900/95 backdrop-blur-md text-white px-4 py-2.5 shadow-md flex items-center justify-between gap-3 text-xs border-b border-slate-800">
       <div className="flex items-center gap-2.5 min-w-0">
-        <div className="w-7 h-7 rounded-lg bg-emerald-800 flex items-center justify-center shrink-0 border border-emerald-700/60">
-          <Download className="w-3.5 h-3.5 text-emerald-300" />
+        <div className="w-7 h-7 rounded-lg bg-emerald-950 flex items-center justify-center shrink-0 border border-emerald-500/40">
+          <Download className="w-3.5 h-3.5 text-emerald-400" />
         </div>
         <div className="min-w-0">
-          <p className="font-semibold text-white truncate">Installer l'application</p>
-          <p className="text-[10px] text-emerald-200/80 truncate">
+          <p className="font-bold text-white truncate">Installer CanoShift</p>
+          <p className="text-[10px] text-slate-400 truncate">
             {isHttpExternal
               ? 'Installer sur écran d’accueil (Mode IP / HTTP)'
-              : 'Accès 1-clic direct et consultation hors ligne'}
+              : 'Accès direct 1-clic et consultation hors ligne'}
           </p>
         </div>
       </div>
@@ -32,23 +32,23 @@ export const PWAInstallBanner: React.FC = () => {
         {isInstallable ? (
           <button
             onClick={install}
-            className="px-2.5 py-1 text-[11px] font-bold bg-white text-emerald-900 rounded-md hover:bg-emerald-50 transition-colors shadow-2xs"
+            className="px-2.5 py-1 text-[11px] font-bold bg-emerald-600 text-white rounded-md hover:bg-emerald-500 transition-colors shadow-2xs"
           >
             Installer
           </button>
         ) : (
           <button
             onClick={() => setShowTip(!showTip)}
-            className="inline-flex items-center gap-1 px-2.5 py-1 text-[11px] font-bold bg-white text-emerald-900 rounded-md hover:bg-emerald-50 transition-colors shadow-2xs"
+            className="inline-flex items-center gap-1 px-2.5 py-1 text-[11px] font-bold bg-slate-800 text-slate-200 border border-slate-700 rounded-md hover:bg-slate-700 transition-colors shadow-2xs"
           >
-            <HelpCircle className="w-3 h-3 text-emerald-800" />
+            <HelpCircle className="w-3 h-3 text-emerald-400" />
             <span>{isIOS ? 'Astuce iPhone' : 'Comment installer ?'}</span>
           </button>
         )}
 
         <button
           onClick={() => setIsDismissed(true)}
-          className="p-1 text-emerald-300 hover:text-white rounded"
+          className="p-1 text-slate-400 hover:text-white rounded"
           aria-label="Fermer la bannière"
         >
           <X className="w-3.5 h-3.5" />
@@ -56,11 +56,11 @@ export const PWAInstallBanner: React.FC = () => {
       </div>
 
       {showTip && (
-        <div className="fixed inset-x-4 top-14 sm:inset-x-auto sm:right-6 sm:w-96 z-50 bg-white text-slate-800 p-4 rounded-2xl shadow-2xl border border-slate-200 space-y-3">
-          <div className="flex items-center justify-between font-bold text-xs text-slate-900 border-b border-slate-100 pb-2">
-            <span className="flex items-center gap-1.5 text-emerald-900 font-bold">
-              <Smartphone className="w-4 h-4 text-emerald-700" />
-              Installation sur smartphone / PC
+        <div className="fixed inset-x-4 top-14 sm:inset-x-auto sm:right-6 sm:w-96 z-50 bg-slate-900 text-slate-100 p-4 rounded-2xl shadow-2xl border border-slate-800 space-y-3">
+          <div className="flex items-center justify-between font-bold text-xs text-white border-b border-slate-800 pb-2">
+            <span className="flex items-center gap-1.5 text-emerald-400 font-bold">
+              <Smartphone className="w-4 h-4 text-emerald-400" />
+              Installation CanoShift sur smartphone / PC
             </span>
             <button
               onClick={() => setShowTip(false)}

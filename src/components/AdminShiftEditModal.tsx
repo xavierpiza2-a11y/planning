@@ -227,10 +227,10 @@ export const AdminShiftEditModal: React.FC<AdminShiftEditModalProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 bg-slate-900/60 backdrop-blur-xs animate-fade-in">
-      <div className="bg-white rounded-3xl max-w-lg w-full max-h-[92vh] flex flex-col shadow-2xl border border-slate-200 overflow-hidden">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 bg-slate-950/70 backdrop-blur-xs animate-fade-in">
+      <div className="bg-white dark:bg-slate-900 rounded-3xl max-w-lg w-full max-h-[92vh] flex flex-col shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden text-slate-900 dark:text-white transition-colors">
         {/* Header */}
-        <div className="p-4 sm:p-5 border-b border-slate-100 flex items-center justify-between bg-linear-to-r from-emerald-800 to-emerald-950 text-white">
+        <div className="p-4 sm:p-5 border-b border-emerald-900 flex items-center justify-between bg-linear-to-r from-emerald-800 to-emerald-950 text-white">
           <div className="flex items-center gap-2.5">
             <div className="w-9 h-9 rounded-xl bg-emerald-700/80 flex items-center justify-center text-emerald-200">
               <Clock className="w-5 h-5" />
@@ -257,14 +257,14 @@ export const AdminShiftEditModal: React.FC<AdminShiftEditModalProps> = ({
           {/* Target Employee & Date Row */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1 flex items-center gap-1.5">
-                <User className="w-3.5 h-3.5 text-emerald-600" />
+              <label className="block text-xs font-bold text-slate-800 dark:text-slate-200 mb-1 flex items-center gap-1.5">
+                <User className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
                 <span>Salarié :</span>
               </label>
               <select
                 value={targetEmployee}
                 onChange={(e) => setTargetEmployee(e.target.value)}
-                className="w-full text-xs font-semibold px-3 py-2 rounded-xl border border-slate-200 bg-slate-50 focus:outline-none focus:ring-2 focus:ring-emerald-600 focus:bg-white transition-all"
+                className="w-full text-xs font-bold text-slate-900 dark:text-white bg-white dark:bg-slate-950 px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-emerald-600 transition-all shadow-xs"
               >
                 {employees.map((emp) => (
                   <option key={emp.name} value={emp.name}>
@@ -275,8 +275,8 @@ export const AdminShiftEditModal: React.FC<AdminShiftEditModalProps> = ({
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1 flex items-center gap-1.5">
-                <Calendar className="w-3.5 h-3.5 text-emerald-600" />
+              <label className="block text-xs font-bold text-slate-800 dark:text-slate-200 mb-1 flex items-center gap-1.5">
+                <Calendar className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
                 <span>Date du shift :</span>
               </label>
               <select
@@ -287,7 +287,7 @@ export const AdminShiftEditModal: React.FC<AdminShiftEditModalProps> = ({
                   const notes = getStoredDayNotes(selectedMonth);
                   setDayNoteInput(notes[newDate] || '');
                 }}
-                className="w-full text-xs font-semibold px-3 py-2 rounded-xl border border-slate-200 bg-slate-50 focus:outline-none focus:ring-2 focus:ring-emerald-600 focus:bg-white transition-all"
+                className="w-full text-xs font-bold text-slate-900 dark:text-white bg-white dark:bg-slate-950 px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-emerald-600 transition-all shadow-xs"
               >
                 {daysList.map((d) => (
                   <option key={d.dateKey} value={d.dateKey}>
@@ -300,9 +300,9 @@ export const AdminShiftEditModal: React.FC<AdminShiftEditModalProps> = ({
 
           {/* Day Note Input */}
           <div className="space-y-1">
-            <label className="text-xs font-bold text-slate-700 flex items-center justify-between">
+            <label className="text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center justify-between">
               <span className="flex items-center gap-1.5">
-                <Calendar className="w-3.5 h-3.5 text-amber-600" />
+                <Calendar className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
                 <span>Information / RDV / Réunion du jour :</span>
               </span>
               {dayNoteInput && (
@@ -320,7 +320,7 @@ export const AdminShiftEditModal: React.FC<AdminShiftEditModalProps> = ({
               placeholder="Ex : Réunion équipe 14h, RDV médecine du travail, Inventaire..."
               value={dayNoteInput}
               onChange={(e) => setDayNoteInput(e.target.value)}
-              className="w-full text-xs p-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-600 bg-white placeholder:text-slate-400 font-medium"
+              className="w-full text-xs p-2.5 rounded-xl border border-slate-300 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-emerald-600 bg-white dark:bg-slate-950 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 font-semibold shadow-xs"
             />
           </div>
 

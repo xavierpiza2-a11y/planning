@@ -34,22 +34,22 @@ export const ProfileSelectorModal: React.FC<ProfileSelectorModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
-      <div className="w-full max-w-sm bg-white rounded-2xl shadow-xl border border-slate-200 overflow-hidden flex flex-col max-h-[85vh]">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm">
+      <div className="w-full max-w-sm bg-slate-900 rounded-2xl shadow-2xl border border-slate-800 overflow-hidden flex flex-col max-h-[85vh] text-slate-100">
         {/* Header */}
-        <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/70">
+        <div className="px-5 py-4 border-b border-slate-800 flex items-center justify-between bg-slate-950/60">
           <div>
-            <h2 className="text-base font-semibold text-slate-900">
+            <h2 className="text-base font-bold text-white">
               Choisir mon profil
             </h2>
-            <p className="text-xs text-slate-500 mt-0.5">
+            <p className="text-xs text-slate-400 mt-0.5">
               Sélectionnez votre profil pour consulter votre planning
             </p>
           </div>
           {currentEmployee && (
             <button
               onClick={onClose}
-              className="p-1 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100"
+              className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
             >
               <X className="w-5 h-5" />
             </button>
@@ -66,8 +66,8 @@ export const ProfileSelectorModal: React.FC<ProfileSelectorModalProps> = ({
                 onClick={() => handleChooseEmployee(emp)}
                 className={`w-full flex items-center justify-between p-3 rounded-xl border transition-all text-left ${
                   isSelected
-                    ? 'border-emerald-600 bg-emerald-50/60 ring-1 ring-emerald-600/30'
-                    : 'border-slate-200 hover:border-slate-300 hover:bg-slate-50 active:bg-slate-100'
+                    ? 'border-emerald-500 bg-emerald-950/40 ring-1 ring-emerald-500/40'
+                    : 'border-slate-800 hover:border-slate-700 bg-slate-900/60 hover:bg-slate-800/60 active:bg-slate-800'
                 }`}
               >
                 <div className="flex items-center gap-3">
@@ -79,23 +79,23 @@ export const ProfileSelectorModal: React.FC<ProfileSelectorModalProps> = ({
                   </div>
                   <div>
                     <div className="flex items-center gap-2">
-                      <span className="text-sm font-semibold text-slate-900">
+                      <span className="text-sm font-bold text-white">
                         {emp.name}
                       </span>
                       {emp.role && (
-                        <span className="text-[10px] bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded font-medium">
+                        <span className="text-[10px] bg-slate-800 text-slate-300 px-1.5 py-0.5 rounded font-medium border border-slate-700">
                           {emp.role}
                         </span>
                       )}
                       {(emp.isAdmin ||
                         (emp.role && emp.role.trim().toLowerCase().includes('responsable')) ||
                         emp.name.trim().toLowerCase() === 'responsable') && (
-                        <span className="text-[10px] bg-emerald-100 text-emerald-800 px-1.5 py-0.5 rounded font-bold border border-emerald-200 flex items-center gap-1">
+                        <span className="text-[10px] bg-emerald-950/80 text-emerald-300 px-1.5 py-0.5 rounded font-bold border border-emerald-500/30 flex items-center gap-1">
                           <span>Admin</span>
                         </span>
                       )}
                     </div>
-                    <span className="text-xs text-slate-500">
+                    <span className="text-xs text-slate-400">
                       Consulter le planning
                     </span>
                   </div>
@@ -103,11 +103,11 @@ export const ProfileSelectorModal: React.FC<ProfileSelectorModalProps> = ({
 
                 <div className="flex items-center gap-1">
                   {isSelected ? (
-                    <div className="w-6 h-6 rounded-full bg-emerald-600 flex items-center justify-center text-white">
+                    <div className="w-6 h-6 rounded-full bg-emerald-500 flex items-center justify-center text-slate-950">
                       <Check className="w-3.5 h-3.5 stroke-[3]" />
                     </div>
                   ) : (
-                    <ArrowRight className="w-4 h-4 text-slate-400" />
+                    <ArrowRight className="w-4 h-4 text-slate-500" />
                   )}
                 </div>
               </button>
@@ -117,12 +117,12 @@ export const ProfileSelectorModal: React.FC<ProfileSelectorModalProps> = ({
 
         {/* Footer: Quitter vers l'écran de sécurité (Token Gate) */}
         {onLockToTokenGate && (
-          <div className="p-3 bg-slate-50 border-t border-slate-100 text-center">
+          <div className="p-3 bg-slate-950/60 border-t border-slate-800 text-center">
             <button
               onClick={handleLockAndExit}
-              className="w-full flex items-center justify-center gap-2 py-2.5 px-3 text-xs font-semibold text-rose-700 bg-rose-50 hover:bg-rose-100 rounded-xl transition-colors border border-rose-200/60 active:scale-[0.99]"
+              className="w-full flex items-center justify-center gap-2 py-2.5 px-3 text-xs font-semibold text-rose-400 bg-rose-950/40 hover:bg-rose-950/60 rounded-xl transition-colors border border-rose-800/40 active:scale-[0.99]"
             >
-              <LockKeyhole className="w-3.5 h-3.5 text-rose-600" />
+              <LockKeyhole className="w-3.5 h-3.5 text-rose-400" />
               <span>Verrouiller & Revenir à l'écran de sécurité</span>
             </button>
           </div>

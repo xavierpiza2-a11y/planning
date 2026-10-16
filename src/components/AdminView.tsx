@@ -140,6 +140,7 @@ interface AdminViewProps {
     teamSchedules: Record<string, any>,
     updatedEmployees?: Employee[]
   ) => void;
+  onBackToPlanning?: () => void;
 }
 
 export const AdminView: React.FC<AdminViewProps> = ({
@@ -158,6 +159,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
   onSwitchToProfile,
   onShiftUpdated,
   onPlanningImported,
+  onBackToPlanning,
 }) => {
   // Authentication state
   const [localAuth, setLocalAuth] = useState(false);
@@ -206,29 +208,13 @@ export const AdminView: React.FC<AdminViewProps> = ({
     setTimeout(() => setAdminToast(null), 3500);
   };
 
-  // Store Name & Reset state
-  const [inputStoreName, setInputStoreName] = useState(() => storeName || getStoreName());
+  // Store Reset modal state
   const [isResetStoreModalOpen, setIsResetStoreModalOpen] = useState(false);
   const [resetStoreInput, setResetStoreInput] = useState('');
 
-  useEffect(() => {
-    if (storeName) {
-      setInputStoreName(storeName);
-    }
-  }, [storeName]);
-
-  const handleSaveStoreName = (e: React.FormEvent) => {
-    e.preventDefault();
-    const clean = inputStoreName.trim() || DEFAULT_STORE_NAME;
-    saveStoreName(clean);
-    onUpdateStoreName?.(clean);
-    showToast('success', `Nom enregistré : « ${clean} »`);
-  };
-
   const handleConfirmResetStore = () => {
-    const finalName = resetStoreInput.trim() || inputStoreName.trim() || DEFAULT_STORE_NAME;
+    const finalName = resetStoreInput.trim() || storeName || DEFAULT_STORE_NAME;
     resetToCleanStore(finalName);
-    setInputStoreName(finalName);
     onUpdateStoreName?.(finalName);
     setTeamList(DEFAULT_EMPLOYEES);
     onUpdateEmployees(DEFAULT_EMPLOYEES);
@@ -924,19 +910,19 @@ export const AdminView: React.FC<AdminViewProps> = ({
   };
 
   // PDF Export from Admin
-  const handleExportPDF = () => {
+  const handleExportPDF = async () => {
     setIsExportingTeamPdf(true);
     try {
       const monthObj = monthsList.find((m) => m.key === shiftEditMonth);
-      exportTeamPlanningToPDF({
+      await exportTeamPlanningToPDF({
         monthKey: shiftEditMonth,
         monthLabel: monthObj?.label || shiftEditMonth,
         employees,
         teamSchedules: teamSchedules || {},
       });
-      setTimeout(() => setIsExportingTeamPdf(false), 1000);
     } catch (err) {
       console.error(err);
+    } finally {
       setIsExportingTeamPdf(false);
     }
   };
@@ -945,6 +931,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
   const isCurrentAdmin = Boolean(
     currentEmployee &&
       (currentEmployee.isAdmin ||
+        currentEmployee.name.trim().toLowerCase() === 'responsable' ||
         (currentEmployee.role &&
           currentEmployee.role.trim().toLowerCase().includes('responsable')))
   );
@@ -964,6 +951,17 @@ export const AdminView: React.FC<AdminViewProps> = ({
           <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 text-xs text-slate-500">
             Profil actif actuel : <strong className="text-slate-800">{currentEmployee ? currentEmployee.name : 'Aucun'}</strong>
           </div>
+          {onBackToPlanning && (
+            <div className="pt-1">
+              <button
+                type="button"
+                onClick={onBackToPlanning}
+                className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-emerald-700 hover:text-emerald-900 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded-xl transition-colors cursor-pointer"
+              >
+                ← Retourner à mon planning
+              </button>
+            </div>
+          )}
         </div>
       </div>
     );
@@ -1589,7 +1587,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">
+                <label className="block text-xs font-bold text-slate-800 dark:text-slate-200 mb-1">
                   Nom du salarié *
                 </label>
                 <input
@@ -1598,12 +1596,12 @@ export const AdminView: React.FC<AdminViewProps> = ({
                   placeholder="Nom du salarié"
                   value={newEmpName}
                   onChange={(e) => setNewEmpName(e.target.value)}
-                  className="w-full text-xs font-semibold px-3 py-2 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-600"
+                  className="w-full text-xs font-bold text-slate-900 dark:text-white bg-white dark:bg-slate-950 px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-600 shadow-xs"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">
+                <label className="block text-xs font-bold text-slate-800 dark:text-slate-200 mb-1">
                   Rôle / Fonction (100% libre)
                 </label>
                 <input
@@ -1611,13 +1609,13 @@ export const AdminView: React.FC<AdminViewProps> = ({
                   placeholder="ex: Responsable, Conseiller-e, Apprenti-e..."
                   value={newEmpRole}
                   onChange={(e) => setNewEmpRole(e.target.value)}
-                  className="w-full text-xs font-semibold px-3 py-2 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-600"
+                  className="w-full text-xs font-bold text-slate-900 dark:text-white bg-white dark:bg-slate-950 px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-600 shadow-xs"
                 />
               </div>
 
               <div className="flex items-center gap-3">
                 <div className="flex-1">
-                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                  <label className="block text-xs font-bold text-slate-800 dark:text-slate-200 mb-1">
                     Couleur avatar
                   </label>
                   <div className="flex items-center gap-2">
@@ -1628,7 +1626,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
                       className="w-9 h-9 rounded-xl cursor-pointer border-0 p-0 overflow-hidden shrink-0 shadow-2xs"
                       title="Couleur de l'avatar"
                     />
-                    <span className="text-xs font-mono text-slate-500 uppercase">
+                    <span className="text-xs font-mono font-bold text-slate-700 dark:text-slate-300 uppercase">
                       {newEmpColor}
                     </span>
                   </div>
@@ -1641,19 +1639,19 @@ export const AdminView: React.FC<AdminViewProps> = ({
                       <label
                         className={`flex items-center gap-1.5 text-xs font-bold select-none ${
                           isResp ? 'cursor-not-allowed opacity-90' : 'cursor-pointer'
-                        } text-slate-700`}
+                        } text-slate-800 dark:text-slate-200`}
                       >
                         <input
                           type="checkbox"
                           checked={isResp ? true : newEmpIsAdmin}
                           disabled={isResp}
                           onChange={(e) => setNewEmpIsAdmin(e.target.checked)}
-                          className="rounded border-slate-300 text-emerald-600 focus:ring-emerald-500 w-4 h-4 disabled:opacity-80"
+                          className="rounded border-slate-300 dark:border-slate-600 text-emerald-600 focus:ring-emerald-500 w-4 h-4 disabled:opacity-80"
                         />
                         <span>Statut Admin</span>
                       </label>
                       {isResp && (
-                        <span className="text-[10px] text-emerald-700 font-semibold mt-0.5">
+                        <span className="text-[10px] text-emerald-700 dark:text-emerald-400 font-semibold mt-0.5">
                           Automatiquement admin
                         </span>
                       )}
@@ -1677,7 +1675,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 {/* Type de contrat */}
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                  <label className="block text-xs font-bold text-slate-800 dark:text-slate-200 mb-1">
                     Régime de travail
                   </label>
                   <select
@@ -1689,7 +1687,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
                         setNewEmpRttTotal(10);
                       }
                     }}
-                    className="w-full text-xs font-semibold px-3 py-2 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-600 bg-white"
+                    className="w-full text-xs font-bold text-slate-900 dark:text-white bg-white dark:bg-slate-950 px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-emerald-600 shadow-xs"
                   >
                     <option value="HEBDO_35H">35h / semaine (Temps plein / partiel)</option>
                     <option value="ANNUALISE">Annualisé (Modulation annuelle)</option>
@@ -1699,7 +1697,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
 
                 {/* Quota d'heures ou de jours */}
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                  <label className="block text-xs font-bold text-slate-800 dark:text-slate-200 mb-1">
                     {newEmpContractType === 'ANNUALISE'
                       ? 'Quota annuel (heures)'
                       : newEmpContractType === 'FORFAIT_JOUR'
@@ -1713,7 +1711,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
                       value={newEmpYearlyQuota}
                       onChange={(e) => setNewEmpYearlyQuota(parseFloat(e.target.value) || 1607)}
                       placeholder="1607"
-                      className="w-full text-xs font-semibold px-3 py-2 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-600 bg-white"
+                      className="w-full text-xs font-bold text-slate-900 dark:text-white bg-white dark:bg-slate-950 px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-emerald-600 shadow-xs"
                     />
                   ) : newEmpContractType === 'FORFAIT_JOUR' ? (
                     <input
@@ -1723,7 +1721,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
                       value={newEmpForfaitDaysQuota}
                       onChange={(e) => setNewEmpForfaitDaysQuota(parseInt(e.target.value, 10) || 218)}
                       placeholder="218"
-                      className="w-full text-xs font-semibold px-3 py-2 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-600 bg-white"
+                      className="w-full text-xs font-bold text-slate-900 dark:text-white bg-white dark:bg-slate-950 px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-emerald-600 shadow-xs"
                     />
                   ) : (
                     <input
@@ -1732,14 +1730,14 @@ export const AdminView: React.FC<AdminViewProps> = ({
                       value={newEmpWeeklyQuota}
                       onChange={(e) => setNewEmpWeeklyQuota(parseFloat(e.target.value) || 35)}
                       placeholder="35"
-                      className="w-full text-xs font-semibold px-3 py-2 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-600 bg-white"
+                      className="w-full text-xs font-bold text-slate-900 dark:text-white bg-white dark:bg-slate-950 px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-emerald-600 shadow-xs"
                     />
                   )}
                 </div>
 
                 {/* Report d'heures initial au 1er juin */}
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                  <label className="block text-xs font-bold text-slate-800 dark:text-slate-200 mb-1">
                     Report d'heures initial (+ / -)
                   </label>
                   <input
@@ -1749,18 +1747,18 @@ export const AdminView: React.FC<AdminViewProps> = ({
                     value={newEmpInitialHoursBalance}
                     onChange={(e) => setNewEmpInitialHoursBalance(parseFloat(e.target.value) || 0)}
                     placeholder="0 (ex: +4 ou -2)"
-                    className="w-full text-xs font-semibold px-3 py-2 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-600 bg-white disabled:bg-slate-100 disabled:text-slate-400"
+                    className="w-full text-xs font-bold text-slate-900 dark:text-white bg-white dark:bg-slate-950 px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-emerald-600 disabled:bg-slate-100 dark:disabled:bg-slate-850 disabled:text-slate-400 shadow-xs"
                   />
-                  <p className="text-[10px] text-slate-400 mt-0.5">
+                  <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">
                     Solde initial au 1er juin (exercice)
                   </p>
                 </div>
               </div>
 
               {/* Congés Payés & RTT */}
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 pt-1 bg-slate-50 p-2.5 rounded-xl border border-slate-200/70">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 pt-1 bg-slate-50 dark:bg-slate-900/60 p-2.5 rounded-xl border border-slate-200/70 dark:border-slate-800">
                 <div>
-                  <label className="block text-[11px] font-bold text-slate-700 mb-0.5">
+                  <label className="block text-[11px] font-bold text-slate-800 dark:text-slate-200 mb-0.5">
                     CP Acquis (total)
                   </label>
                   <input
@@ -1769,12 +1767,12 @@ export const AdminView: React.FC<AdminViewProps> = ({
                     min="0"
                     value={newEmpPaidLeaveTotal}
                     onChange={(e) => setNewEmpPaidLeaveTotal(parseInt(e.target.value, 10) || 0)}
-                    className="w-full text-xs font-semibold px-2.5 py-1.5 rounded-lg border border-slate-300 bg-white"
+                    className="w-full text-xs font-bold text-slate-900 dark:text-white bg-white dark:bg-slate-950 px-2.5 py-1.5 rounded-lg border border-slate-300 dark:border-slate-700 shadow-2xs"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-[11px] font-bold text-slate-700 mb-0.5">
+                  <label className="block text-[11px] font-bold text-slate-800 dark:text-slate-200 mb-0.5">
                     CP Déjà pris au 1er juin
                   </label>
                   <input
@@ -1783,12 +1781,12 @@ export const AdminView: React.FC<AdminViewProps> = ({
                     min="0"
                     value={newEmpPaidLeaveTaken}
                     onChange={(e) => setNewEmpPaidLeaveTaken(parseInt(e.target.value, 10) || 0)}
-                    className="w-full text-xs font-semibold px-2.5 py-1.5 rounded-lg border border-slate-300 bg-white"
+                    className="w-full text-xs font-bold text-slate-900 dark:text-white bg-white dark:bg-slate-950 px-2.5 py-1.5 rounded-lg border border-slate-300 dark:border-slate-700 shadow-2xs"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-[11px] font-bold text-slate-700 mb-0.5">
+                  <label className="block text-[11px] font-bold text-slate-800 dark:text-slate-200 mb-0.5">
                     RTT Acquis (total)
                   </label>
                   <input
@@ -1797,12 +1795,12 @@ export const AdminView: React.FC<AdminViewProps> = ({
                     min="0"
                     value={newEmpRttTotal}
                     onChange={(e) => setNewEmpRttTotal(parseInt(e.target.value, 10) || 0)}
-                    className="w-full text-xs font-semibold px-2.5 py-1.5 rounded-lg border border-slate-300 bg-white"
+                    className="w-full text-xs font-bold text-slate-900 dark:text-white bg-white dark:bg-slate-950 px-2.5 py-1.5 rounded-lg border border-slate-300 dark:border-slate-700 shadow-2xs"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-[11px] font-bold text-slate-700 mb-0.5">
+                  <label className="block text-[11px] font-bold text-slate-800 dark:text-slate-200 mb-0.5">
                     RTT Déjà pris au 1er juin
                   </label>
                   <input
@@ -1811,7 +1809,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
                     min="0"
                     value={newEmpRttTaken}
                     onChange={(e) => setNewEmpRttTaken(parseInt(e.target.value, 10) || 0)}
-                    className="w-full text-xs font-semibold px-2.5 py-1.5 rounded-lg border border-slate-300 bg-white"
+                    className="w-full text-xs font-bold text-slate-900 dark:text-white bg-white dark:bg-slate-950 px-2.5 py-1.5 rounded-lg border border-slate-300 dark:border-slate-700 shadow-2xs"
                   />
                 </div>
               </div>
@@ -1861,7 +1859,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
 
                 <form onSubmit={handleSaveEditEmployee} className="space-y-3.5">
                   <div>
-                    <label className="block text-xs font-bold text-slate-700 mb-1">
+                    <label className="block text-xs font-bold text-slate-800 dark:text-slate-200 mb-1">
                       Nom du salarié *
                     </label>
                     <input
@@ -1869,15 +1867,15 @@ export const AdminView: React.FC<AdminViewProps> = ({
                       required
                       value={editEmpName}
                       onChange={(e) => setEditEmpName(e.target.value)}
-                      className="w-full text-xs font-semibold px-3 py-2 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-600"
+                      className="w-full text-xs font-bold text-slate-900 dark:text-white bg-white dark:bg-slate-950 px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-600 shadow-xs"
                     />
-                    <p className="text-[10px] text-slate-400 mt-1">
+                    <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-1">
                       Si vous modifiez le nom, tous les plannings du salarié seront automatiquement conservés et transférés sous le nouveau nom.
                     </p>
                   </div>
 
                   <div>
-                    <label className="block text-xs font-bold text-slate-700 mb-1">
+                    <label className="block text-xs font-bold text-slate-800 dark:text-slate-200 mb-1">
                       Rôle / Fonction (libre)
                     </label>
                     <input
@@ -1885,13 +1883,13 @@ export const AdminView: React.FC<AdminViewProps> = ({
                       placeholder="ex: Responsable, Conseiller-e, Adjoint-e, Apprenti-e..."
                       value={editEmpRole}
                       onChange={(e) => setEditEmpRole(e.target.value)}
-                      className="w-full text-xs font-semibold px-3 py-2 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-600"
+                      className="w-full text-xs font-bold text-slate-900 dark:text-white bg-white dark:bg-slate-950 px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-600 shadow-xs"
                     />
                   </div>
 
                   <div className="grid grid-cols-2 gap-3 pt-1">
                     <div>
-                      <label className="block text-xs font-bold text-slate-700 mb-1">
+                      <label className="block text-xs font-bold text-slate-800 dark:text-slate-200 mb-1">
                         Couleur d'avatar
                       </label>
                       <div className="flex items-center gap-2">
@@ -1901,7 +1899,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
                           onChange={(e) => setEditEmpColor(e.target.value)}
                           className="w-9 h-9 rounded-xl cursor-pointer border-0 p-0 overflow-hidden shrink-0 shadow-2xs"
                         />
-                        <span className="text-xs font-mono text-slate-500 uppercase">
+                        <span className="text-xs font-mono font-bold text-slate-700 dark:text-slate-300 uppercase">
                           {editEmpColor}
                         </span>
                       </div>
@@ -1914,19 +1912,19 @@ export const AdminView: React.FC<AdminViewProps> = ({
                           <label
                             className={`flex items-center gap-2 text-xs font-bold select-none ${
                               isResp ? 'cursor-not-allowed opacity-90' : 'cursor-pointer'
-                            } text-slate-700`}
+                            } text-slate-800 dark:text-slate-200`}
                           >
                             <input
                               type="checkbox"
                               checked={isResp ? true : editEmpIsAdmin}
                               disabled={isResp}
                               onChange={(e) => setEditEmpIsAdmin(e.target.checked)}
-                              className="rounded border-slate-300 text-emerald-600 focus:ring-emerald-500 w-4 h-4 disabled:opacity-80"
+                              className="rounded border-slate-300 dark:border-slate-600 text-emerald-600 focus:ring-emerald-500 w-4 h-4 disabled:opacity-80"
                             />
                             <span>Droits Admin</span>
                           </label>
                           {isResp && (
-                            <p className="text-[10px] text-emerald-700 font-semibold mt-1">
+                            <p className="text-[10px] text-emerald-700 dark:text-emerald-400 font-semibold mt-1">
                               Le responsable est obligatoirement administrateur (non modifiable).
                             </p>
                           )}
@@ -1936,12 +1934,12 @@ export const AdminView: React.FC<AdminViewProps> = ({
                   </div>
 
                   {/* Section Contrat & Compteurs Exercice Annuel (1er Juin - 31 Mai) */}
-                  <div className="pt-3 border-t border-slate-100 space-y-3">
+                  <div className="pt-3 border-t border-slate-100 dark:border-slate-800 space-y-3">
                     <div className="flex items-center justify-between">
-                      <h5 className="text-xs font-bold text-slate-900">
+                      <h5 className="text-xs font-bold text-slate-900 dark:text-white">
                         Régime de travail & Compteurs (1er Juin – 31 Mai)
                       </h5>
-                      <span className="text-[10px] font-mono text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
+                      <span className="text-[10px] font-mono text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/70 px-2 py-0.5 rounded-md border border-emerald-200 dark:border-emerald-800">
                         Calcul en temps réel
                       </span>
                     </div>
@@ -1949,7 +1947,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                       {/* Contrat */}
                       <div>
-                        <label className="block text-xs font-bold text-slate-700 mb-1">
+                        <label className="block text-xs font-bold text-slate-800 dark:text-slate-200 mb-1">
                           Régime de travail
                         </label>
                         <select
@@ -1961,7 +1959,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
                               setEditEmpRttTotal(10);
                             }
                           }}
-                          className="w-full text-xs font-semibold px-3 py-2 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-600 bg-white"
+                          className="w-full text-xs font-bold text-slate-900 dark:text-white bg-white dark:bg-slate-950 px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-emerald-600 shadow-xs"
                         >
                           <option value="HEBDO_35H">35h / semaine</option>
                           <option value="ANNUALISE">Annualisé (Modulation)</option>
@@ -1971,7 +1969,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
 
                       {/* Quota */}
                       <div>
-                        <label className="block text-xs font-bold text-slate-700 mb-1">
+                        <label className="block text-xs font-bold text-slate-800 dark:text-slate-200 mb-1">
                           {editEmpContractType === 'ANNUALISE'
                             ? 'Quota annuel (h)'
                             : editEmpContractType === 'FORFAIT_JOUR'
@@ -1984,7 +1982,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
                             step="1"
                             value={editEmpYearlyQuota}
                             onChange={(e) => setEditEmpYearlyQuota(parseFloat(e.target.value) || 1607)}
-                            className="w-full text-xs font-semibold px-3 py-2 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-600 bg-white"
+                            className="w-full text-xs font-bold text-slate-900 dark:text-white bg-white dark:bg-slate-950 px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-emerald-600 shadow-xs"
                           />
                         ) : editEmpContractType === 'FORFAIT_JOUR' ? (
                           <input
@@ -1994,7 +1992,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
                             value={editEmpForfaitDaysQuota}
                             onChange={(e) => setEditEmpForfaitDaysQuota(parseInt(e.target.value, 10) || 218)}
                             placeholder="218"
-                            className="w-full text-xs font-semibold px-3 py-2 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-600 bg-white"
+                            className="w-full text-xs font-bold text-slate-900 dark:text-white bg-white dark:bg-slate-950 px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-emerald-600 shadow-xs"
                           />
                         ) : (
                           <input
@@ -2002,14 +2000,14 @@ export const AdminView: React.FC<AdminViewProps> = ({
                             step="0.5"
                             value={editEmpWeeklyQuota}
                             onChange={(e) => setEditEmpWeeklyQuota(parseFloat(e.target.value) || 35)}
-                            className="w-full text-xs font-semibold px-3 py-2 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-600 bg-white"
+                            className="w-full text-xs font-bold text-slate-900 dark:text-white bg-white dark:bg-slate-950 px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-emerald-600 shadow-xs"
                           />
                         )}
                       </div>
 
                       {/* Report d'heures */}
                       <div>
-                        <label className="block text-xs font-bold text-slate-700 mb-1">
+                        <label className="block text-xs font-bold text-slate-800 dark:text-slate-200 mb-1">
                           Report 1er juin (+ / -)
                         </label>
                         <input
@@ -2019,15 +2017,15 @@ export const AdminView: React.FC<AdminViewProps> = ({
                           value={editEmpInitialHoursBalance}
                           onChange={(e) => setEditEmpInitialHoursBalance(parseFloat(e.target.value) || 0)}
                           placeholder="0"
-                          className="w-full text-xs font-semibold px-3 py-2 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-600 bg-white disabled:bg-slate-100 disabled:text-slate-400"
+                          className="w-full text-xs font-bold text-slate-900 dark:text-white bg-white dark:bg-slate-950 px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-emerald-600 disabled:bg-slate-100 dark:disabled:bg-slate-850 disabled:text-slate-400 shadow-xs"
                         />
                       </div>
                     </div>
 
                     {/* Congés Payés & RTT */}
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 bg-slate-50 p-2.5 rounded-xl border border-slate-200/70">
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 bg-slate-50 dark:bg-slate-900/60 p-2.5 rounded-xl border border-slate-200/70 dark:border-slate-800">
                       <div>
-                        <label className="block text-[11px] font-bold text-slate-700 mb-0.5">
+                        <label className="block text-[11px] font-bold text-slate-800 dark:text-slate-200 mb-0.5">
                           CP Acquis (total)
                         </label>
                         <input
@@ -2036,12 +2034,12 @@ export const AdminView: React.FC<AdminViewProps> = ({
                           min="0"
                           value={editEmpPaidLeaveTotal}
                           onChange={(e) => setEditEmpPaidLeaveTotal(parseInt(e.target.value, 10) || 0)}
-                          className="w-full text-xs font-semibold px-2.5 py-1.5 rounded-lg border border-slate-300 bg-white"
+                          className="w-full text-xs font-bold text-slate-900 dark:text-white bg-white dark:bg-slate-950 px-2.5 py-1.5 rounded-lg border border-slate-300 dark:border-slate-700 shadow-2xs"
                         />
                       </div>
 
                       <div>
-                        <label className="block text-[11px] font-bold text-slate-700 mb-0.5">
+                        <label className="block text-[11px] font-bold text-slate-800 dark:text-slate-200 mb-0.5">
                           CP Déjà pris au 1er juin
                         </label>
                         <input
@@ -2050,12 +2048,12 @@ export const AdminView: React.FC<AdminViewProps> = ({
                           min="0"
                           value={editEmpPaidLeaveTaken}
                           onChange={(e) => setEditEmpPaidLeaveTaken(parseInt(e.target.value, 10) || 0)}
-                          className="w-full text-xs font-semibold px-2.5 py-1.5 rounded-lg border border-slate-300 bg-white"
+                          className="w-full text-xs font-bold text-slate-900 dark:text-white bg-white dark:bg-slate-950 px-2.5 py-1.5 rounded-lg border border-slate-300 dark:border-slate-700 shadow-2xs"
                         />
                       </div>
 
                       <div>
-                        <label className="block text-[11px] font-bold text-slate-700 mb-0.5">
+                        <label className="block text-[11px] font-bold text-slate-800 dark:text-slate-200 mb-0.5">
                           RTT Acquis (total)
                         </label>
                         <input
@@ -2064,12 +2062,12 @@ export const AdminView: React.FC<AdminViewProps> = ({
                           min="0"
                           value={editEmpRttTotal}
                           onChange={(e) => setEditEmpRttTotal(parseInt(e.target.value, 10) || 0)}
-                          className="w-full text-xs font-semibold px-2.5 py-1.5 rounded-lg border border-slate-300 bg-white"
+                          className="w-full text-xs font-bold text-slate-900 dark:text-white bg-white dark:bg-slate-950 px-2.5 py-1.5 rounded-lg border border-slate-300 dark:border-slate-700 shadow-2xs"
                         />
                       </div>
 
                       <div>
-                        <label className="block text-[11px] font-bold text-slate-700 mb-0.5">
+                        <label className="block text-[11px] font-bold text-slate-800 dark:text-slate-200 mb-0.5">
                           RTT Déjà pris au 1er juin
                         </label>
                         <input
@@ -2078,7 +2076,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
                           min="0"
                           value={editEmpRttTaken}
                           onChange={(e) => setEditEmpRttTaken(parseInt(e.target.value, 10) || 0)}
-                          className="w-full text-xs font-semibold px-2.5 py-1.5 rounded-lg border border-slate-300 bg-white"
+                          className="w-full text-xs font-bold text-slate-900 dark:text-white bg-white dark:bg-slate-950 px-2.5 py-1.5 rounded-lg border border-slate-300 dark:border-slate-700 shadow-2xs"
                         />
                       </div>
                     </div>
@@ -2230,19 +2228,19 @@ export const AdminView: React.FC<AdminViewProps> = ({
 
             <div className="grid grid-cols-1 sm:grid-cols-4 gap-2.5">
               <div>
-                <label className="block text-[10px] font-bold text-slate-600 uppercase mb-1">
+                <label className="block text-[10px] font-bold text-slate-700 dark:text-slate-300 uppercase mb-1">
                   Mois & Année :
                 </label>
                 <input
                   type="month"
                   value={newMonthPickerVal}
                   onChange={(e) => handleMonthPickerChange(e.target.value)}
-                  className="w-full text-xs font-semibold px-3 py-2 rounded-lg border border-slate-200 bg-slate-50 focus:outline-none focus:ring-1 focus:ring-emerald-600"
+                  className="w-full text-xs font-bold text-slate-900 dark:text-white bg-white dark:bg-slate-950 px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-700 focus:outline-none focus:ring-1 focus:ring-emerald-600 shadow-2xs"
                 />
               </div>
 
               <div>
-                <label className="block text-[10px] font-bold text-slate-600 uppercase mb-1">
+                <label className="block text-[10px] font-bold text-slate-700 dark:text-slate-300 uppercase mb-1">
                   Libellé affiché :
                 </label>
                 <input
@@ -2250,12 +2248,12 @@ export const AdminView: React.FC<AdminViewProps> = ({
                   placeholder="ex: Novembre 2026"
                   value={newMonthLabel}
                   onChange={(e) => setNewMonthLabel(e.target.value)}
-                  className="w-full text-xs font-semibold px-3 py-2 rounded-lg border border-slate-200 focus:outline-none focus:ring-1 focus:ring-emerald-600"
+                  className="w-full text-xs font-bold text-slate-900 dark:text-white bg-white dark:bg-slate-950 px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-700 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-1 focus:ring-emerald-600 shadow-2xs"
                 />
               </div>
 
               <div>
-                <label className="block text-[10px] font-bold text-slate-600 uppercase mb-1">
+                <label className="block text-[10px] font-bold text-slate-700 dark:text-slate-300 uppercase mb-1">
                   Onglet Excel :
                 </label>
                 <input
@@ -2263,7 +2261,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
                   placeholder="ex: NOVEMBRE 26"
                   value={newMonthTab}
                   onChange={(e) => setNewMonthTab(e.target.value.toUpperCase())}
-                  className="w-full text-xs font-semibold px-3 py-2 rounded-lg border border-slate-200 focus:outline-none focus:ring-1 focus:ring-emerald-600 uppercase"
+                  className="w-full text-xs font-bold text-slate-900 dark:text-white bg-white dark:bg-slate-950 px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-700 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-1 focus:ring-emerald-600 uppercase shadow-2xs"
                 />
               </div>
 
@@ -2316,7 +2314,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                <label className="block text-xs font-bold text-slate-800 dark:text-slate-200 mb-1">
                   Nouveau code PIN (6 chiffres) :
                 </label>
                 <input
@@ -2326,12 +2324,12 @@ export const AdminView: React.FC<AdminViewProps> = ({
                   placeholder="••••••"
                   value={newAdminPin}
                   onChange={(e) => setNewAdminPin(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                  className="w-full text-xs font-mono px-3 py-2.5 rounded-lg border border-slate-300 focus:outline-none focus:ring-1 focus:ring-emerald-600 tracking-widest text-center"
+                  className="w-full text-xs font-mono font-bold text-slate-900 dark:text-white bg-white dark:bg-slate-950 px-3 py-2.5 rounded-lg border border-slate-300 dark:border-slate-700 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-1 focus:ring-emerald-600 tracking-widest text-center shadow-2xs"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                <label className="block text-xs font-bold text-slate-800 dark:text-slate-200 mb-1">
                   Confirmer le code PIN (6 chiffres) :
                 </label>
                 <input
@@ -2341,7 +2339,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
                   placeholder="••••••"
                   value={confirmAdminPin}
                   onChange={(e) => setConfirmAdminPin(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                  className="w-full text-xs font-mono px-3 py-2.5 rounded-lg border border-slate-300 focus:outline-none focus:ring-1 focus:ring-emerald-600 tracking-widest text-center"
+                  className="w-full text-xs font-mono font-bold text-slate-900 dark:text-white bg-white dark:bg-slate-950 px-3 py-2.5 rounded-lg border border-slate-300 dark:border-slate-700 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-1 focus:ring-emerald-600 tracking-widest text-center shadow-2xs"
                 />
               </div>
             </div>
@@ -2645,20 +2643,20 @@ export const AdminView: React.FC<AdminViewProps> = ({
 
       {/* MODAL: MODIFIER UN MOIS */}
       {monthToEdit && (
-        <div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-200">
-          <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-xl max-w-md w-full space-y-4">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+        <div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-xs animate-in fade-in duration-200">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-5 shadow-xl max-w-md w-full space-y-4 text-slate-900 dark:text-white transition-colors">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
               <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-lg bg-emerald-100 text-emerald-800 flex items-center justify-center">
+                <div className="w-8 h-8 rounded-lg bg-emerald-100 dark:bg-emerald-950/80 text-emerald-800 dark:text-emerald-300 flex items-center justify-center">
                   <Edit3 className="w-4 h-4" />
                 </div>
-                <h4 className="text-sm font-bold text-slate-900">
+                <h4 className="text-sm font-bold text-slate-900 dark:text-white">
                   Modifier le mois « {monthToEdit.label} »
                 </h4>
               </div>
               <button
                 onClick={() => setMonthToEdit(null)}
-                className="p-1 rounded-lg text-slate-400 hover:text-slate-600"
+                className="p-1 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -2666,7 +2664,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
 
             <form onSubmit={handleSaveEditMonth} className="space-y-3">
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                <label className="block text-xs font-bold text-slate-800 dark:text-slate-200 mb-1">
                   Clé du mois (AAAA-MM) :
                 </label>
                 <input
@@ -2680,12 +2678,12 @@ export const AdminView: React.FC<AdminViewProps> = ({
                       setEditMonthTab(getExcelTabLabel(val));
                     }
                   }}
-                  className="w-full text-xs font-semibold px-3 py-2 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-600"
+                  className="w-full text-xs font-bold text-slate-900 dark:text-white bg-white dark:bg-slate-950 px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-emerald-600 shadow-xs"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                <label className="block text-xs font-bold text-slate-800 dark:text-slate-200 mb-1">
                   Libellé complet :
                 </label>
                 <input
@@ -2693,12 +2691,12 @@ export const AdminView: React.FC<AdminViewProps> = ({
                   required
                   value={editMonthLabel}
                   onChange={(e) => setEditMonthLabel(e.target.value)}
-                  className="w-full text-xs font-semibold px-3 py-2 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-600"
+                  className="w-full text-xs font-bold text-slate-900 dark:text-white bg-white dark:bg-slate-950 px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-emerald-600 shadow-xs"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                <label className="block text-xs font-bold text-slate-800 dark:text-slate-200 mb-1">
                   Nom d'onglet Excel :
                 </label>
                 <input
@@ -2706,25 +2704,25 @@ export const AdminView: React.FC<AdminViewProps> = ({
                   required
                   value={editMonthTab}
                   onChange={(e) => setEditMonthTab(e.target.value.toUpperCase())}
-                  className="w-full text-xs font-semibold px-3 py-2 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-600 uppercase"
+                  className="w-full text-xs font-bold text-slate-900 dark:text-white bg-white dark:bg-slate-950 px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-emerald-600 uppercase shadow-xs"
                 />
               </div>
 
               {/* Working days & Base hours modulation */}
-              <div className="bg-slate-50 p-3 rounded-xl border border-slate-200/80 space-y-2.5">
+              <div className="bg-slate-50 dark:bg-slate-900/60 p-3 rounded-xl border border-slate-200/80 dark:border-slate-800 space-y-2.5">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
-                    <CalendarDays className="w-3.5 h-3.5 text-emerald-600" />
+                  <span className="text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+                    <CalendarDays className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
                     <span>Base horaire & Jours ouvrés du mois</span>
                   </span>
-                  <span className="text-[10px] text-slate-500">
+                  <span className="text-[10px] text-slate-500 dark:text-slate-400">
                     Samedi & Dimanche chômés
                   </span>
                 </div>
 
                 <div className="grid grid-cols-2 gap-2.5">
                   <div>
-                    <label className="block text-[11px] font-semibold text-slate-600 mb-1">
+                    <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
                       Jours ouvrés (Mon-Fri) :
                     </label>
                     <input
@@ -2740,12 +2738,12 @@ export const AdminView: React.FC<AdminViewProps> = ({
                           setEditMonthCustomBaseHours(String(parseInt(val, 10) * 7));
                         }
                       }}
-                      className="w-full text-xs font-semibold px-3 py-2 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-600 bg-white"
+                      className="w-full text-xs font-bold text-slate-900 dark:text-white bg-white dark:bg-slate-950 px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-emerald-600 shadow-2xs"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-[11px] font-semibold text-slate-600 mb-1">
+                    <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
                       Base d'heures du mois :
                     </label>
                     <input
@@ -2755,12 +2753,12 @@ export const AdminView: React.FC<AdminViewProps> = ({
                       placeholder={`Auto : ${getMonthWorkingCalendar(editMonthKey).standardBaseHours}h`}
                       value={editMonthCustomBaseHours}
                       onChange={(e) => setEditMonthCustomBaseHours(e.target.value)}
-                      className="w-full text-xs font-semibold px-3 py-2 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-600 bg-white"
+                      className="w-full text-xs font-bold text-slate-900 dark:text-white bg-white dark:bg-slate-950 px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-emerald-600 shadow-2xs"
                     />
                   </div>
                 </div>
 
-                <p className="text-[10px] text-slate-500 leading-relaxed">
+                <p className="text-[10px] text-slate-500 dark:text-slate-400 leading-relaxed">
                   Laissez vide pour conserver le <strong>calcul automatique</strong> basé sur les jours ouvrés réels du mois (7h/jour ouvré, hors jours fériés). Remplissez pour moduler manuellement.
                 </p>
               </div>
@@ -2791,22 +2789,22 @@ export const AdminView: React.FC<AdminViewProps> = ({
 
       {/* MODAL: REMISE À ZÉRO POUR UN NOUVEAU MAGASIN */}
       {isResetStoreModalOpen && (
-        <div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-200">
-          <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-xl max-w-md w-full space-y-4">
-            <div className="w-12 h-12 rounded-full bg-rose-100 text-rose-700 flex items-center justify-center mx-auto">
+        <div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-xs animate-in fade-in duration-200">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-5 shadow-xl max-w-md w-full space-y-4 text-slate-900 dark:text-white transition-colors">
+            <div className="w-12 h-12 rounded-full bg-rose-100 dark:bg-rose-950/80 text-rose-700 dark:text-rose-300 flex items-center justify-center mx-auto">
               <AlertTriangle className="w-6 h-6" />
             </div>
 
             <div className="text-center space-y-1.5">
-              <h4 className="text-base font-bold text-slate-900">
+              <h4 className="text-base font-bold text-slate-900 dark:text-white">
                 Remettre l'application à zéro ?
               </h4>
-              <p className="text-xs text-slate-600 leading-relaxed">
+              <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
                 Cette opération prépare l'application pour un <strong>nouveau magasin</strong> en effaçant tous les salariés personnalisés, les notes et les plannings du magasin précédent.
               </p>
-              <div className="p-2.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-900 text-xs text-left space-y-1">
+              <div className="p-2.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-200 dark:border-emerald-800/80 text-emerald-900 dark:text-emerald-200 text-xs text-left space-y-1">
                 <p className="font-semibold">Ce qui sera conservé intact :</p>
-                <ul className="list-disc list-inside text-[11px] text-emerald-800 space-y-0.5">
+                <ul className="list-disc list-inside text-[11px] text-emerald-800 dark:text-emerald-300 space-y-0.5">
                   <li>Le compte Administrateur nommé « Responsable » (accès complet préservé)</li>
                   <li>Les créneaux et horaires types d'exemple</li>
                   <li>Le code PIN d'accès Administrateur</li>
@@ -2815,7 +2813,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
             </div>
 
             <div className="space-y-1">
-              <label className="block text-xs font-semibold text-slate-700">
+              <label className="block text-xs font-bold text-slate-800 dark:text-slate-200">
                 Nom du nouveau magasin / entreprise :
               </label>
               <input
@@ -2823,7 +2821,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
                 value={resetStoreInput}
                 onChange={(e) => setResetStoreInput(e.target.value)}
                 placeholder="Ex: Mon Nouveau Magasin"
-                className="w-full text-xs font-semibold px-3 py-2 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-600"
+                className="w-full text-xs font-bold text-slate-900 dark:text-white bg-white dark:bg-slate-950 px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-600 shadow-xs"
               />
             </div>
 
@@ -2831,7 +2829,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
               <button
                 type="button"
                 onClick={() => setIsResetStoreModalOpen(false)}
-                className="py-2.5 px-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs transition-colors"
+                className="py-2.5 px-3 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-semibold text-xs transition-colors"
               >
                 Annuler
               </button>

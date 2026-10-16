@@ -39,6 +39,7 @@ interface TeamViewProps {
   onSelectMonth: (monthKey: string) => void;
   onRefresh: () => void;
   onShiftUpdated?: (employeeName: string, dateKey: string, shift: string, hours: string) => void;
+  onNavigateToAdmin?: () => void;
 }
 
 export const TeamView: React.FC<TeamViewProps> = ({
@@ -55,6 +56,7 @@ export const TeamView: React.FC<TeamViewProps> = ({
   onSelectMonth,
   onRefresh,
   onShiftUpdated,
+  onNavigateToAdmin,
 }) => {
   // Default to day view as requested
   const [viewMode, setViewMode] = useState<'day' | 'matrix'>('day');
@@ -87,9 +89,17 @@ export const TeamView: React.FC<TeamViewProps> = ({
     setIsDayNoteModalOpen(true);
   };
 
+  // Check if current logged-in employee has Admin rights (Responsable is permanently admin)
+  const isResponsableAdmin = Boolean(
+    currentEmployee?.isAdmin ||
+      currentEmployee?.name?.trim().toLowerCase() === 'responsable' ||
+      (currentEmployee?.role && currentEmployee.role.trim().toLowerCase().includes('responsable'))
+  );
+
   // Local Admin active state if not controlled by parent App
   const [localAdminActive, setLocalAdminActive] = useState<boolean>(false);
-  const isCurrentlyAdminActive = isAdminActive !== undefined ? isAdminActive : localAdminActive;
+  const rawAdminActive = isAdminActive !== undefined ? isAdminActive : localAdminActive;
+  const isCurrentlyAdminActive = isResponsableAdmin && rawAdminActive;
   const setAdminActiveState = onSetAdminActive || setLocalAdminActive;
 
   const [isPinModalOpen, setIsPinModalOpen] = useState(false);
@@ -104,13 +114,6 @@ export const TeamView: React.FC<TeamViewProps> = ({
 
   const tableContainerRef = useRef<HTMLDivElement | null>(null);
   const todayHeaderRef = useRef<HTMLTableHeaderCellElement | null>(null);
-
-  // Check if current logged-in employee has Admin rights (Responsable is permanently admin)
-  const isResponsableAdmin = Boolean(
-    currentEmployee?.isAdmin ||
-      currentEmployee?.name?.trim().toLowerCase() === 'responsable' ||
-      (currentEmployee?.role && currentEmployee.role.trim().toLowerCase().includes('responsable'))
-  );
 
   // Month label
   const currentMonthItem = useMemo(() => {
@@ -294,10 +297,10 @@ export const TeamView: React.FC<TeamViewProps> = ({
   }, [isLoading, viewMode, selectedMonth, isMonthContainingToday]);
 
   // PDF Export Handler (Single page Landscape A4 with export timestamp at footer)
-  const handleExportPDF = () => {
+  const handleExportPDF = async () => {
     setIsExportingPdf(true);
     try {
-      exportTeamPlanningToPDF({
+      await exportTeamPlanningToPDF({
         monthKey: selectedMonth,
         monthLabel,
         employees,
@@ -334,7 +337,13 @@ export const TeamView: React.FC<TeamViewProps> = ({
     currentShift?: string,
     currentHours?: string
   ) => {
-    // Mode admin MUST be activated! No automatic bypass for any profile!
+    // Non-admin employees must be redirected directly to restricted access screen
+    if (!isResponsableAdmin) {
+      onNavigateToAdmin?.();
+      return;
+    }
+
+    // Mode admin MUST be activated for admins!
     if (isCurrentlyAdminActive) {
       handleOpenEditModal(empName, dateKey, currentShift, currentHours);
     } else {
@@ -445,12 +454,16 @@ export const TeamView: React.FC<TeamViewProps> = ({
             <button
               type="button"
               onClick={() => {
+                if (!isResponsableAdmin) {
+                  onNavigateToAdmin?.();
+                  return;
+                }
                 setPendingTarget(null);
                 setPinInput('');
                 setPinError('');
                 setIsPinModalOpen(true);
               }}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 hover:bg-slate-200 border border-slate-200 text-slate-700 text-xs font-semibold rounded-lg transition-colors shadow-2xs"
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 hover:bg-slate-200 border border-slate-200 text-slate-700 text-xs font-semibold rounded-lg transition-colors shadow-2xs cursor-pointer"
               title="Activer le mode administrateur avec votre code PIN"
             >
               <Lock className="w-3.5 h-3.5 text-slate-500 shrink-0" />

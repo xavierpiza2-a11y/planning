@@ -472,7 +472,7 @@ export async function dbGetMonthSchedules(
   return db.schedules[monthKey] || {};
 }
 
-export function calculateShiftDurationHours(
+function calculateShiftDurationHours(
   shiftText: string,
   hoursText?: string,
   tableau2Options: any[] = []
@@ -675,7 +675,7 @@ export async function dbClearChanges(storeId: string, employeeName: string): Pro
   saveStoreDataFile(storeId);
 }
 
-export async function dbRecordChange(
+async function dbRecordChange(
   storeId: string,
   employeeName: string,
   dateKey: string,
@@ -769,7 +769,7 @@ export async function dbClearAllHistory(storeId: string): Promise<number> {
   return deletedCount;
 }
 
-export async function dbRecordHistory(
+async function dbRecordHistory(
   storeId: string,
   employee: string,
   date: string,

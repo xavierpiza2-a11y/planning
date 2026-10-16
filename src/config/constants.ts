@@ -1,6 +1,6 @@
 import type { Employee, MonthItem, ShiftCategory, Tableau2ShiftOption, ShiftCategoryItem } from '../types/planning.ts';
 
-export const DEFAULT_API_TOKEN = 'PLANNING';
+export const DEFAULT_API_TOKEN = 'CANOSHIFT';
 
 export const DEFAULT_ADMIN_PIN = '000000';
 
@@ -204,7 +204,7 @@ export const DEFAULT_TABLEAU2_SHIFTS: Tableau2ShiftOption[] = [
 ];
 
 
-export const DEFAULT_STORE_NAME = 'Planning Équipe';
+export const DEFAULT_STORE_NAME = 'CanoShift';
 
 export const DEFAULT_EMPLOYEES: Employee[] = [
   {

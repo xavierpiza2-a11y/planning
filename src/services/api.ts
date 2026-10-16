@@ -80,27 +80,7 @@ export function getStoreHeaders(): Record<string, string> {
   return headers;
 }
 
-// ---------------------------------------------------------------------------
-// REAL-TIME CACHE SYNCHRONIZATION
-// ---------------------------------------------------------------------------
-type DataChangeListener = (eventType: string, data: any) => void;
-const changeListeners = new Set<DataChangeListener>();
-
-export function subscribeToDataChanges(listener: DataChangeListener): () => void {
-  changeListeners.add(listener);
-  return () => {
-    changeListeners.delete(listener);
-  };
-}
-
 function notifyDataChange(eventType: string, data: any) {
-  for (const listener of changeListeners) {
-    try {
-      listener(eventType, data);
-    } catch (e) {
-      console.error('Error in data change listener:', e);
-    }
-  }
   if (typeof window !== 'undefined') {
     window.dispatchEvent(new CustomEvent('planning_database_sync', { detail: { eventType, data } }));
   }
@@ -313,29 +293,6 @@ export async function saveApiToken(newToken: string): Promise<boolean> {
   }
 }
 
-export async function verifyApiToken(token: string): Promise<boolean> {
-  const entered = (token || '').trim().toUpperCase();
-  if (!entered) return false;
-  try {
-    const res = await fetch('/api/verify-token', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ token: entered }),
-    });
-    if (res.ok) {
-      const data = await res.json();
-      if (data.valid && data.store) {
-        setActiveStore(data.store);
-        return true;
-      }
-      return Boolean(data.valid);
-    }
-  } catch {
-    // offline fallback
-  }
-  const configured = getApiToken().trim().toUpperCase();
-  return entered === configured;
-}
 
 export async function verifyApiTokenWithStore(token: string): Promise<{
   valid: boolean;
@@ -620,37 +577,6 @@ export async function saveEmployees(employees: Employee[]): Promise<boolean> {
   return false;
 }
 
-export function saveStoredEmployees(employees: Employee[]): void {
-  const sanitized = ensureResponsableAdmin(employees);
-  if (typeof window !== 'undefined') {
-    const current = getCachedConfig() || {
-      employees: DEFAULT_EMPLOYEES,
-      visibleMonths: DEFAULT_VISIBLE_MONTHS,
-      allMonths: DEFAULT_ALL_MONTHS,
-    };
-    current.employees = sanitized;
-    localStorage.setItem(KEY_CACHED_CONFIG, JSON.stringify(current));
-  }
-  fetch('/api/config', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      ...getStoreHeaders(),
-    },
-    body: JSON.stringify({ employees: sanitized }),
-  }).catch(() => {
-    // Silent catch when offline or in background sync
-  });
-}
-
-export function getStoredEmployees(): Employee[] {
-  const cached = getCachedConfig();
-  if (cached && Array.isArray(cached.employees) && cached.employees.length > 0) {
-    return ensureResponsableAdmin(cached.employees);
-  }
-  return ensureResponsableAdmin(DEFAULT_EMPLOYEES);
-}
-
 export async function saveStoredCategories(categories: ShiftCategoryItem[]): Promise<void> {
   if (typeof window !== 'undefined') {
     localStorage.setItem(KEY_CACHED_CATEGORIES, JSON.stringify(categories));
@@ -669,11 +595,6 @@ export async function saveStoredCategories(categories: ShiftCategoryItem[]): Pro
   }
 }
 
-export async function resetStoredCategories(): Promise<ShiftCategoryItem[]> {
-  await saveStoredCategories(DEFAULT_CATEGORIES);
-  return DEFAULT_CATEGORIES;
-}
-
 export async function saveStoredTableau2Shifts(shifts: Tableau2ShiftOption[]): Promise<void> {
   if (typeof window !== 'undefined') {
     localStorage.setItem(KEY_CACHED_TABLEAU2, JSON.stringify(shifts));
@@ -690,11 +611,6 @@ export async function saveStoredTableau2Shifts(shifts: Tableau2ShiftOption[]): P
   } catch (err) {
     console.error('Failed to save Tableau 2 shifts to database:', err);
   }
-}
-
-export async function resetStoredTableau2Shifts(): Promise<Tableau2ShiftOption[]> {
-  await saveStoredTableau2Shifts(DEFAULT_TABLEAU2_SHIFTS);
-  return DEFAULT_TABLEAU2_SHIFTS;
 }
 
 export async function clearAllTableau2AndCategories(): Promise<{
@@ -1169,26 +1085,6 @@ export async function deleteEmployeeHistory(employeeName: string): Promise<{ suc
   } catch (err: any) {
     return { success: false, count: 0, error: err.message };
   }
-}
-
-export function recordChange(
-  employeeName: string,
-  date: string,
-  previousShift: string | undefined,
-  newShift: string,
-  previousHours: string | undefined,
-  newHours: string
-) {
-  // Changes are recorded directly on the server when calling updateShiftInSheet.
-}
-
-export function recordHistory(
-  employeeName: string,
-  date: string,
-  changeText: string,
-  timestamp: string
-) {
-  // History is recorded directly on the server when calling updateShiftInSheet.
 }
 
 export async function fetchAvailableShifts(): Promise<Tableau2ShiftOption[]> {

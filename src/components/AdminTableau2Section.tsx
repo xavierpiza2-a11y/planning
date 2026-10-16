@@ -712,7 +712,7 @@ export const AdminTableau2Section: React.FC<AdminTableau2SectionProps> = ({
               {/* 1. Libellé et Code Shift */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                  <label className="block text-xs font-bold text-slate-800 dark:text-slate-200 mb-1">
                     Libellé manuel *
                   </label>
                   <input
@@ -721,19 +721,19 @@ export const AdminTableau2Section: React.FC<AdminTableau2SectionProps> = ({
                     placeholder="ex: OUVERTURE, MATIN, FERMETURE, REPOS..."
                     value={formLabel}
                     onChange={(e) => handleLabelChange(e.target.value)}
-                    className="w-full text-xs font-semibold px-3 py-2 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-600"
+                    className="w-full text-xs font-bold text-slate-900 dark:text-white bg-white dark:bg-slate-950 px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-600 shadow-xs"
                   />
-                  <p className="text-[10px] text-slate-400 mt-1">
+                  <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-1">
                     La plage horaire sera automatiquement rattachée à ce libellé.
                   </p>
                 </div>
 
                 <div>
                   <div className="flex items-center justify-between mb-1">
-                    <label className="block text-xs font-bold text-slate-700">
+                    <label className="block text-xs font-bold text-slate-800 dark:text-slate-200">
                       Code Shift (automatique)
                     </label>
-                    <span className="text-[10px] text-slate-400">Pour le planning Excel</span>
+                    <span className="text-[10px] text-slate-500 dark:text-slate-400">Pour le planning Excel</span>
                   </div>
                   <input
                     type="text"
@@ -743,7 +743,7 @@ export const AdminTableau2Section: React.FC<AdminTableau2SectionProps> = ({
                       setFormShiftCode(e.target.value.toUpperCase());
                       setIsCodeManuallyModified(true);
                     }}
-                    className="w-full text-xs font-bold px-3 py-2 rounded-xl border border-slate-300 bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-600 uppercase"
+                    className="w-full text-xs font-mono font-black text-slate-900 dark:text-white bg-slate-50 dark:bg-slate-900 px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 focus:bg-white dark:focus:bg-slate-950 focus:outline-none focus:ring-2 focus:ring-emerald-600 uppercase shadow-xs"
                   />
                 </div>
               </div>
@@ -792,25 +792,25 @@ export const AdminTableau2Section: React.FC<AdminTableau2SectionProps> = ({
 
                       <div className="grid grid-cols-2 gap-2">
                         <div>
-                          <label className="block text-[10px] font-semibold text-slate-500 mb-0.5">
+                          <label className="block text-[10px] font-bold text-slate-700 dark:text-slate-300 mb-0.5">
                             Heure début (00:00)
                           </label>
                           <input
                             type="time"
                             value={amStart}
                             onChange={(e) => handleAmStartChange(e.target.value)}
-                            className="w-full text-xs font-semibold px-2.5 py-1.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-emerald-600 focus:outline-none bg-white"
+                            className="w-full text-xs font-bold text-slate-900 dark:text-white bg-white dark:bg-slate-950 px-2.5 py-1.5 rounded-lg border border-slate-300 dark:border-slate-700 focus:ring-2 focus:ring-emerald-600 focus:outline-none shadow-2xs"
                           />
                         </div>
                         <div>
-                          <label className="block text-[10px] font-semibold text-slate-500 mb-0.5">
+                          <label className="block text-[10px] font-bold text-slate-700 dark:text-slate-300 mb-0.5">
                             Heure fin (00:00)
                           </label>
                           <input
                             type="time"
                             value={amEnd}
                             onChange={(e) => handleAmEndChange(e.target.value)}
-                            className="w-full text-xs font-semibold px-2.5 py-1.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-emerald-600 focus:outline-none bg-white"
+                            className="w-full text-xs font-bold text-slate-900 dark:text-white bg-white dark:bg-slate-950 px-2.5 py-1.5 rounded-lg border border-slate-300 dark:border-slate-700 focus:ring-2 focus:ring-emerald-600 focus:outline-none shadow-2xs"
                           />
                         </div>
                       </div>
@@ -818,12 +818,12 @@ export const AdminTableau2Section: React.FC<AdminTableau2SectionProps> = ({
 
                     {/* Checkbox for 2nd range */}
                     <div className="flex items-center justify-between px-1">
-                      <label className="flex items-center gap-2 cursor-pointer text-xs font-semibold text-slate-700 select-none">
+                      <label className="flex items-center gap-2 cursor-pointer text-xs font-bold text-slate-800 dark:text-slate-200 select-none">
                         <input
                           type="checkbox"
                           checked={hasPm}
                           onChange={(e) => handleHasPmChange(e.target.checked)}
-                          className="rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
+                          className="rounded border-slate-300 dark:border-slate-600 text-emerald-600 focus:ring-emerald-500"
                         />
                         <span>Ajouter une 2ème plage (Après-midi / AP - Coupure)</span>
                       </label>
@@ -831,13 +831,13 @@ export const AdminTableau2Section: React.FC<AdminTableau2SectionProps> = ({
 
                     {/* Plage 2: Après-midi (AP) */}
                     {hasPm && (
-                      <div className="bg-white p-3 rounded-xl border border-slate-200 space-y-2 animate-in fade-in duration-150">
+                      <div className="bg-white dark:bg-slate-900 p-3 rounded-xl border border-slate-200 dark:border-slate-700 space-y-2 animate-in fade-in duration-150">
                         <div className="flex items-center justify-between">
-                          <span className="text-[11px] font-bold text-slate-700 uppercase tracking-wide">
+                          <span className="text-[11px] font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wide">
                             Plage 2 (Après-midi / AP)
                           </span>
                           {pmStart && pmEnd && (
-                            <span className="text-[11px] font-mono font-bold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200/60">
+                            <span className="text-[11px] font-mono font-bold text-emerald-800 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/70 px-2 py-0.5 rounded border border-emerald-200/60 dark:border-emerald-800">
                               {pmStart}-{pmEnd} ({formatDecimalToHoursMins(calculateTimeDiffHours(pmStart, pmEnd))})
                             </span>
                           )}
@@ -845,25 +845,25 @@ export const AdminTableau2Section: React.FC<AdminTableau2SectionProps> = ({
 
                         <div className="grid grid-cols-2 gap-2">
                           <div>
-                            <label className="block text-[10px] font-semibold text-slate-500 mb-0.5">
+                            <label className="block text-[10px] font-bold text-slate-700 dark:text-slate-300 mb-0.5">
                               Heure début (00:00)
                             </label>
                             <input
                               type="time"
                               value={pmStart}
                               onChange={(e) => handlePmStartChange(e.target.value)}
-                              className="w-full text-xs font-semibold px-2.5 py-1.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-emerald-600 focus:outline-none bg-white"
+                              className="w-full text-xs font-bold text-slate-900 dark:text-white bg-white dark:bg-slate-950 px-2.5 py-1.5 rounded-lg border border-slate-300 dark:border-slate-700 focus:ring-2 focus:ring-emerald-600 focus:outline-none shadow-2xs"
                             />
                           </div>
                           <div>
-                            <label className="block text-[10px] font-semibold text-slate-500 mb-0.5">
+                            <label className="block text-[10px] font-bold text-slate-700 dark:text-slate-300 mb-0.5">
                               Heure fin (00:00)
                             </label>
                             <input
                               type="time"
                               value={pmEnd}
                               onChange={(e) => handlePmEndChange(e.target.value)}
-                              className="w-full text-xs font-semibold px-2.5 py-1.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-emerald-600 focus:outline-none bg-white"
+                              className="w-full text-xs font-bold text-slate-900 dark:text-white bg-white dark:bg-slate-950 px-2.5 py-1.5 rounded-lg border border-slate-300 dark:border-slate-700 focus:ring-2 focus:ring-emerald-600 focus:outline-none shadow-2xs"
                             />
                           </div>
                         </div>
@@ -1037,7 +1037,7 @@ export const AdminTableau2Section: React.FC<AdminTableau2SectionProps> = ({
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                  <label className="block text-xs font-bold text-slate-800 dark:text-slate-200 mb-1">
                     Description / Remarque (optionnel)
                   </label>
                   <input
@@ -1045,7 +1045,7 @@ export const AdminTableau2Section: React.FC<AdminTableau2SectionProps> = ({
                     placeholder="ex: Vacation renfort samedi..."
                     value={formDescription}
                     onChange={(e) => setFormDescription(e.target.value)}
-                    className="w-full text-xs font-semibold px-3 py-2 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-600"
+                    className="w-full text-xs font-bold text-slate-900 dark:text-white bg-white dark:bg-slate-950 px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-600 shadow-xs"
                   />
                 </div>
               </div>

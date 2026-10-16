@@ -271,33 +271,33 @@ export const SuperAdminModal: React.FC<SuperAdminModalProps> = ({
 
       {/* Screen 1: Password Authenticator */}
       {!isAuthenticated ? (
-        <div className="bg-white rounded-3xl p-6 sm:p-8 max-w-md w-full shadow-2xl border border-slate-100 space-y-6 relative">
+        <div className="bg-slate-900/95 backdrop-blur-xl rounded-3xl p-6 sm:p-8 max-w-md w-full shadow-2xl border border-slate-800 space-y-6 relative text-slate-100">
           <button
             onClick={onClose}
-            className="absolute top-5 right-5 p-2 rounded-xl text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors"
+            className="absolute top-5 right-5 p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
           >
             <X className="w-5 h-5" />
           </button>
 
           <div className="text-center space-y-2">
-            <div className="w-16 h-16 rounded-2xl bg-slate-900 text-emerald-400 flex items-center justify-center mx-auto shadow-lg shadow-slate-900/20">
-              <Lock className="w-8 h-8" />
+            <div className="w-16 h-16 rounded-2xl bg-slate-950 text-emerald-400 border border-slate-800 flex items-center justify-center mx-auto shadow-lg shadow-black/40">
+              <Lock className="w-8 h-8 text-emerald-400" />
             </div>
-            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-100 text-slate-800 text-xs font-bold">
-              <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
-              <span>Accès Gestionnaire Réseau</span>
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-800 text-emerald-300 border border-slate-700 text-xs font-bold">
+              <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
+              <span>CanoShift Réseau</span>
             </div>
-            <h2 className="text-lg font-bold text-slate-900">
+            <h2 className="text-lg font-bold text-white">
               Espace Administration Multi-Magasins
             </h2>
-            <p className="text-xs text-slate-500 leading-relaxed max-w-xs mx-auto">
+            <p className="text-xs text-slate-400 leading-relaxed max-w-xs mx-auto">
               Saisissez le mot de passe Super-Administrateur.
             </p>
           </div>
 
           <form onSubmit={handleLogin} className="space-y-4">
             <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-slate-700 block">
+              <label className="text-xs font-semibold text-slate-300 block">
                 Mot de passe Super-Admin :
               </label>
               <div className="relative">
@@ -310,18 +310,18 @@ export const SuperAdminModal: React.FC<SuperAdminModalProps> = ({
                     setPasswordInput(e.target.value);
                     setAuthError('');
                   }}
-                  className="w-full px-4 py-3 pr-10 text-sm font-semibold rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-600"
+                  className="w-full px-4 py-3 pr-10 text-sm font-semibold rounded-xl bg-slate-950 border border-slate-700 text-white placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-1"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-200 p-1"
                 >
                   {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
               </div>
               {authError && (
-                <div className="flex items-center gap-1.5 text-rose-600 text-xs font-semibold pt-1">
+                <div className="flex items-center gap-1.5 text-rose-400 text-xs font-semibold pt-1">
                   <ShieldAlert className="w-3.5 h-3.5 shrink-0" />
                   <span>{authError}</span>
                 </div>
@@ -331,21 +331,21 @@ export const SuperAdminModal: React.FC<SuperAdminModalProps> = ({
             <button
               type="submit"
               disabled={isLoggingIn || !passwordInput.trim()}
-              className="w-full py-3 px-4 rounded-xl text-xs font-bold text-white bg-slate-900 hover:bg-slate-800 disabled:opacity-50 transition-all flex items-center justify-center gap-2 shadow-md cursor-pointer"
+              className="w-full py-3 px-4 rounded-xl text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 transition-all flex items-center justify-center gap-2 shadow-lg shadow-emerald-950/50 hover:shadow-xl cursor-pointer"
             >
               {isLoggingIn ? (
                 <span>Vérification...</span>
               ) : (
                 <>
                   <span>Déverrouiller le Gestionnaire</span>
-                  <ShieldCheck className="w-4 h-4 text-emerald-400" />
+                  <ShieldCheck className="w-4 h-4 text-white" />
                 </>
               )}
             </button>
           </form>
 
-          <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl text-[11px] text-slate-500 leading-relaxed">
-            <p className="font-semibold text-slate-700 mb-0.5">Sécurité d'accès garantie :</p>
+          <div className="p-3 bg-slate-950/70 border border-slate-800 rounded-xl text-[11px] text-slate-400 leading-relaxed">
+            <p className="font-semibold text-slate-300 mb-0.5">Sécurité d'accès garantie :</p>
             Ce mot de passe est modifiable exclusivement sur le serveur.
           </div>
         </div>
@@ -605,20 +605,20 @@ export const SuperAdminModal: React.FC<SuperAdminModalProps> = ({
       {/* MODAL 1: CREATE STORE */}
       {isCreateModalOpen && (
         <div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-xs animate-in fade-in duration-200">
-          <div className="bg-white rounded-3xl border border-slate-200 p-6 shadow-2xl max-w-md w-full space-y-5">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+          <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 p-6 shadow-2xl max-w-md w-full space-y-5 text-slate-900 dark:text-white transition-colors">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
               <div className="flex items-center gap-2.5">
-                <div className="w-9 h-9 rounded-xl bg-emerald-100 text-emerald-800 flex items-center justify-center font-bold">
+                <div className="w-9 h-9 rounded-xl bg-emerald-100 dark:bg-emerald-950/80 text-emerald-800 dark:text-emerald-300 flex items-center justify-center font-bold">
                   <Plus className="w-5 h-5" />
                 </div>
                 <div>
-                  <h4 className="text-sm font-bold text-slate-900">Nouveau Magasin</h4>
-                  <p className="text-xs text-slate-500">Ajouter un établissement indépendant</p>
+                  <h4 className="text-sm font-bold text-slate-900 dark:text-white">Nouveau Magasin</h4>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">Ajouter un établissement indépendant</p>
                 </div>
               </div>
               <button
                 onClick={() => setIsCreateModalOpen(false)}
-                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600"
+                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -626,7 +626,7 @@ export const SuperAdminModal: React.FC<SuperAdminModalProps> = ({
 
             <form onSubmit={handleCreateStore} className="space-y-4">
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                <label className="block text-xs font-bold text-slate-800 dark:text-slate-200 mb-1">
                   Nom du magasin / établissement :
                 </label>
                 <input
@@ -635,12 +635,12 @@ export const SuperAdminModal: React.FC<SuperAdminModalProps> = ({
                   placeholder="Ex: Magasin Lyon Centre"
                   value={newStoreName}
                   onChange={(e) => setNewStoreName(e.target.value)}
-                  className="w-full text-xs font-semibold px-3.5 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-600"
+                  className="w-full text-xs font-bold text-slate-900 dark:text-white bg-white dark:bg-slate-950 px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-600 focus:border-transparent shadow-xs"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                <label className="block text-xs font-bold text-slate-800 dark:text-slate-200 mb-1">
                   Clé d'accès salariés (unique) :
                 </label>
                 <input
@@ -649,15 +649,15 @@ export const SuperAdminModal: React.FC<SuperAdminModalProps> = ({
                   placeholder="Ex: LYON2026"
                   value={newStoreToken}
                   onChange={(e) => setNewStoreToken(e.target.value.toUpperCase())}
-                  className="w-full text-xs font-mono uppercase font-bold px-3.5 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-600"
+                  className="w-full text-xs font-mono uppercase font-black text-slate-900 dark:text-white bg-white dark:bg-slate-950 px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-600 focus:border-transparent shadow-xs"
                 />
-                <p className="text-[11px] text-slate-400 mt-1">
+                <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1">
                   Cette clé permettra d'accéder directement à ce magasin depuis l'écran d'accueil.
                 </p>
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                <label className="block text-xs font-bold text-slate-800 dark:text-slate-200 mb-1">
                   Code PIN administrateur initial (6 chiffres) :
                 </label>
                 <input
@@ -667,7 +667,7 @@ export const SuperAdminModal: React.FC<SuperAdminModalProps> = ({
                   placeholder="000000"
                   value={newStorePin}
                   onChange={(e) => setNewStorePin(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                  className="w-full text-xs font-mono px-3.5 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-600 text-center tracking-widest"
+                  className="w-full text-xs font-mono font-bold text-slate-900 dark:text-white bg-white dark:bg-slate-950 px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-600 text-center tracking-widest shadow-xs"
                 />
               </div>
 
@@ -675,7 +675,7 @@ export const SuperAdminModal: React.FC<SuperAdminModalProps> = ({
                 <button
                   type="button"
                   onClick={() => setIsCreateModalOpen(false)}
-                  className="px-4 py-2 text-xs font-semibold text-slate-600 hover:text-slate-800 bg-slate-100 rounded-xl"
+                  className="px-4 py-2 text-xs font-semibold text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-xl transition-colors"
                 >
                   Annuler
                 </button>
@@ -695,20 +695,20 @@ export const SuperAdminModal: React.FC<SuperAdminModalProps> = ({
       {/* MODAL 2: EDIT STORE */}
       {storeToEdit && (
         <div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-xs animate-in fade-in duration-200">
-          <div className="bg-white rounded-3xl border border-slate-200 p-6 shadow-2xl max-w-md w-full space-y-5">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+          <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 p-6 shadow-2xl max-w-md w-full space-y-5 text-slate-900 dark:text-white transition-colors">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
               <div className="flex items-center gap-2.5">
-                <div className="w-9 h-9 rounded-xl bg-blue-100 text-blue-800 flex items-center justify-center font-bold">
+                <div className="w-9 h-9 rounded-xl bg-blue-100 dark:bg-blue-950/80 text-blue-800 dark:text-blue-300 flex items-center justify-center font-bold">
                   <Edit2 className="w-5 h-5" />
                 </div>
                 <div>
-                  <h4 className="text-sm font-bold text-slate-900">Modifier le magasin</h4>
-                  <p className="text-xs text-slate-500">Mettre à jour le nom, la clé ou le PIN</p>
+                  <h4 className="text-sm font-bold text-slate-900 dark:text-white">Modifier le magasin</h4>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">Mettre à jour le nom, la clé ou le PIN</p>
                 </div>
               </div>
               <button
                 onClick={() => setStoreToEdit(null)}
-                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600"
+                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -716,7 +716,7 @@ export const SuperAdminModal: React.FC<SuperAdminModalProps> = ({
 
             <form onSubmit={handleUpdateStore} className="space-y-4">
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                <label className="block text-xs font-bold text-slate-800 dark:text-slate-200 mb-1">
                   Nom du magasin :
                 </label>
                 <input
@@ -724,12 +724,12 @@ export const SuperAdminModal: React.FC<SuperAdminModalProps> = ({
                   required
                   value={editStoreName}
                   onChange={(e) => setEditStoreName(e.target.value)}
-                  className="w-full text-xs font-semibold px-3.5 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-600"
+                  className="w-full text-xs font-bold text-slate-900 dark:text-white bg-white dark:bg-slate-950 px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-600 shadow-xs"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                <label className="block text-xs font-bold text-slate-800 dark:text-slate-200 mb-1">
                   Clé d'accès salariés (unique) :
                 </label>
                 <input
@@ -737,12 +737,12 @@ export const SuperAdminModal: React.FC<SuperAdminModalProps> = ({
                   required
                   value={editStoreToken}
                   onChange={(e) => setEditStoreToken(e.target.value.toUpperCase())}
-                  className="w-full text-xs font-mono uppercase font-bold px-3.5 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-600"
+                  className="w-full text-xs font-mono uppercase font-black text-slate-900 dark:text-white bg-white dark:bg-slate-950 px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-600 shadow-xs"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                <label className="block text-xs font-bold text-slate-800 dark:text-slate-200 mb-1">
                   Code PIN administrateur (6 chiffres) :
                 </label>
                 <input
@@ -751,7 +751,7 @@ export const SuperAdminModal: React.FC<SuperAdminModalProps> = ({
                   maxLength={6}
                   value={editStorePin}
                   onChange={(e) => setEditStorePin(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                  className="w-full text-xs font-mono px-3.5 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-600 text-center tracking-widest"
+                  className="w-full text-xs font-mono font-bold text-slate-900 dark:text-white bg-white dark:bg-slate-950 px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-emerald-600 text-center tracking-widest shadow-xs"
                 />
               </div>
 
@@ -759,14 +759,14 @@ export const SuperAdminModal: React.FC<SuperAdminModalProps> = ({
                 <button
                   type="button"
                   onClick={() => setStoreToEdit(null)}
-                  className="px-4 py-2 text-xs font-semibold text-slate-600 hover:text-slate-800 bg-slate-100 rounded-xl"
+                  className="px-4 py-2 text-xs font-semibold text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-xl transition-colors"
                 >
                   Annuler
                 </button>
                 <button
                   type="submit"
                   disabled={isUpdating || !editStoreName.trim() || !editStoreToken.trim()}
-                  className="px-4 py-2 text-xs font-bold text-white bg-blue-700 hover:bg-blue-800 disabled:opacity-50 rounded-xl transition-colors shadow-xs"
+                  className="px-4 py-2 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50 rounded-xl transition-colors shadow-xs"
                 >
                   {isUpdating ? 'Enregistrement...' : 'Enregistrer les modifications'}
                 </button>
@@ -779,16 +779,16 @@ export const SuperAdminModal: React.FC<SuperAdminModalProps> = ({
       {/* MODAL 3: CONFIRM DELETE STORE */}
       {storeToDelete && (
         <div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-xs animate-in fade-in duration-200">
-          <div className="bg-white rounded-3xl border border-slate-200 p-6 shadow-2xl max-w-sm w-full space-y-4 text-center">
-            <div className="w-12 h-12 rounded-2xl bg-rose-100 text-rose-700 flex items-center justify-center mx-auto">
+          <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 p-6 shadow-2xl max-w-sm w-full space-y-4 text-center transition-colors">
+            <div className="w-12 h-12 rounded-2xl bg-rose-100 dark:bg-rose-950/80 text-rose-700 dark:text-rose-300 flex items-center justify-center mx-auto">
               <Trash2 className="w-6 h-6" />
             </div>
 
             <div className="space-y-1">
-              <h4 className="text-base font-bold text-slate-900">
+              <h4 className="text-base font-bold text-slate-900 dark:text-white">
                 Supprimer le magasin « {storeToDelete.name} » ?
               </h4>
-              <p className="text-xs text-slate-500 leading-relaxed">
+              <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
                 Toutes les données de ce magasin ({storeToDelete.dataFile}) seront définitivement effacées du serveur.
               </p>
             </div>
@@ -797,7 +797,7 @@ export const SuperAdminModal: React.FC<SuperAdminModalProps> = ({
               <button
                 type="button"
                 onClick={() => setStoreToDelete(null)}
-                className="py-2.5 px-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs transition-colors"
+                className="py-2.5 px-3 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-semibold text-xs transition-colors"
               >
                 Annuler
               </button>
@@ -817,16 +817,16 @@ export const SuperAdminModal: React.FC<SuperAdminModalProps> = ({
       {/* MODAL 4: CONFIRM RESET STORE */}
       {storeToReset && (
         <div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-xs animate-in fade-in duration-200">
-          <div className="bg-white rounded-3xl border border-slate-200 p-6 shadow-2xl max-w-sm w-full space-y-4 text-center">
-            <div className="w-12 h-12 rounded-2xl bg-amber-100 text-amber-800 flex items-center justify-center mx-auto">
+          <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 p-6 shadow-2xl max-w-sm w-full space-y-4 text-center transition-colors">
+            <div className="w-12 h-12 rounded-2xl bg-amber-100 dark:bg-amber-950/80 text-amber-800 dark:text-amber-300 flex items-center justify-center mx-auto">
               <RotateCcw className="w-6 h-6" />
             </div>
 
             <div className="space-y-1">
-              <h4 className="text-base font-bold text-slate-900">
+              <h4 className="text-base font-bold text-slate-900 dark:text-white">
                 Remise à zéro de « {storeToReset.name} » ?
               </h4>
-              <p className="text-xs text-slate-500 leading-relaxed">
+              <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
                 Tous les plannings et saisies de ce magasin seront effacés pour repartir sur une base vierge. Le nom et la clé d'accès seront conservés.
               </p>
             </div>
@@ -835,7 +835,7 @@ export const SuperAdminModal: React.FC<SuperAdminModalProps> = ({
               <button
                 type="button"
                 onClick={() => setStoreToReset(null)}
-                className="py-2.5 px-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs transition-colors"
+                className="py-2.5 px-3 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-semibold text-xs transition-colors"
               >
                 Annuler
               </button>

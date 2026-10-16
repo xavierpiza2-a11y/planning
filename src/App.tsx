@@ -45,6 +45,7 @@ import { HistoryModal } from './components/HistoryModal';
 import { PWAInstallBanner } from './components/PWAInstallBanner';
 import { TokenGate } from './components/TokenGate';
 import { WifiOff, UserCheck } from 'lucide-react';
+import { useTheme } from './hooks/useTheme';
 
 const STORAGE_KEY_EMPLOYEE = 'planning_logged_emp';
 const STORAGE_KEY_MONTH = 'planning_selected_month';
@@ -52,6 +53,7 @@ const STORAGE_KEY_TOKEN_VALIDATED = 'planning_token_validated';
 
 export default function App() {
   const isOnline = useOnlineStatus();
+  const { theme, isDark } = useTheme();
 
   // Mandatory Token Gate State
   const [isTokenValidated, setIsTokenValidated] = useState<boolean>(() => {
@@ -64,7 +66,7 @@ export default function App() {
   const [storeName, setStoreName] = useState<string>(getStoreName);
 
   useEffect(() => {
-    document.title = `${storeName} · Planning`;
+    document.title = `${storeName || 'CanoShift'} · CanoShift`;
   }, [storeName]);
 
   const handleUpdateStoreName = (name: string) => {
@@ -164,12 +166,12 @@ export default function App() {
         currentEmployee.name.trim().toLowerCase() === 'responsable')
   );
 
-  // Keep admin active if PIN has unlocked it; otherwise fallback to non-admin if profile is switched
+  // If active profile is not an admin, ensure admin session is always deactivated
   useEffect(() => {
-    if (activeTab === 'admin' && !isCurrentEmployeeAdmin && !isAdminActive) {
-      setActiveTab('my-planning');
+    if (!isCurrentEmployeeAdmin && isAdminActive) {
+      setIsAdminActive(false);
     }
-  }, [activeTab, isCurrentEmployeeAdmin, isAdminActive]);
+  }, [isCurrentEmployeeAdmin, isAdminActive]);
 
   // Initial Load: Config & Stored Employee
   useEffect(() => {
@@ -329,10 +331,8 @@ export default function App() {
     setCurrentEmployee(safeEmp);
     localStorage.setItem(STORAGE_KEY_EMPLOYEE, safeEmp.name);
 
-    if (!isNewEmpAdmin && !isAdminActive) {
-      if (activeTab === 'admin') {
-        setActiveTab('my-planning');
-      }
+    if (!isNewEmpAdmin) {
+      setIsAdminActive(false);
     }
 
     // Instant local cache switch for the selected employee
@@ -646,7 +646,7 @@ export default function App() {
 
   // 2. Main App Screen once token is validated
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col antialiased text-slate-900">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col antialiased text-slate-900 dark:text-slate-100 transition-colors duration-150">
       {/* PWA Banner */}
       <PWAInstallBanner />
 
@@ -671,7 +671,7 @@ export default function App() {
       )}
 
       {/* Main Content Viewport */}
-      <main className="flex-1 max-w-5xl w-full mx-auto p-4">
+      <main className="flex-1 max-w-5xl w-full mx-auto p-4 pb-24">
         {activeTab === 'my-planning' ? (
           currentEmployee ? (
             <EmployeeView
@@ -687,17 +687,17 @@ export default function App() {
               onOpenHistory={handleOpenHistory}
             />
           ) : (
-            <div className="bg-white rounded-2xl border border-slate-200 p-8 text-center space-y-4 max-w-sm mx-auto my-12">
-              <div className="w-12 h-12 rounded-full bg-emerald-100 text-emerald-800 flex items-center justify-center mx-auto">
+            <div className="bg-slate-900/90 rounded-2xl border border-slate-800 p-8 text-center space-y-4 max-w-sm mx-auto my-12 text-slate-100 shadow-xl">
+              <div className="w-12 h-12 rounded-full bg-emerald-950/80 border border-emerald-500/30 text-emerald-400 flex items-center justify-center mx-auto">
                 <UserCheck className="w-6 h-6" />
               </div>
-              <h3 className="text-base font-bold text-slate-900">Bienvenue sur votre planning</h3>
-              <p className="text-xs text-slate-600">
+              <h3 className="text-base font-bold text-white">Bienvenue sur CanoShift</h3>
+              <p className="text-xs text-slate-400">
                 Veuillez sélectionner votre profil employé pour commencer.
               </p>
               <button
                 onClick={() => setIsProfileModalOpen(true)}
-                className="w-full py-2.5 px-4 text-xs font-semibold text-white bg-emerald-700 hover:bg-emerald-800 rounded-xl transition-colors shadow-xs"
+                className="w-full py-2.5 px-4 text-xs font-semibold text-white bg-emerald-600 hover:bg-emerald-500 rounded-xl transition-colors shadow-xs"
               >
                 Choisir mon profil
               </button>
@@ -717,6 +717,7 @@ export default function App() {
             onSelectMonth={handleSelectMonth}
             onRefresh={handleManualRefresh}
             onShiftUpdated={handleShiftUpdated}
+            onNavigateToAdmin={() => setActiveTab('admin')}
           />
         ) : activeTab === 'hours-analytics' ? (
           <HoursAnalyticsView
@@ -747,6 +748,8 @@ export default function App() {
             onSwitchToProfile={handleSelectEmployee}
             onShiftUpdated={handleShiftUpdated}
             onPlanningImported={handlePlanningImported}
+            onUpdateStoreName={handleUpdateStoreName}
+            onBackToPlanning={() => setActiveTab('my-planning')}
           />
         )}
       </main>

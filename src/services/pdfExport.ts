@@ -36,11 +36,54 @@ function formatShiftCell(shiftText: string, hoursText: string, category: string)
 }
 
 /**
+ * Load /logo-full-light.svg and convert to PNG data URL for jsPDF embedding
+ */
+async function getLogoFullLightDataUrl(): Promise<string | null> {
+  if (typeof window === 'undefined' || typeof document === 'undefined') return null;
+  try {
+    const res = await fetch('/logo-full-light.svg');
+    if (!res.ok) return null;
+    const svgText = await res.text();
+    const blob = new Blob([svgText], { type: 'image/svg+xml;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    return await new Promise<string | null>((resolve) => {
+      const img = new Image();
+      img.onload = () => {
+        try {
+          const canvas = document.createElement('canvas');
+          canvas.width = 480;
+          canvas.height = 120;
+          const ctx = canvas.getContext('2d');
+          if (ctx) {
+            ctx.drawImage(img, 0, 0, 480, 120);
+            const dataUrl = canvas.toDataURL('image/png');
+            URL.revokeObjectURL(url);
+            resolve(dataUrl);
+            return;
+          }
+        } catch {
+          // ignore
+        }
+        URL.revokeObjectURL(url);
+        resolve(null);
+      };
+      img.onerror = () => {
+        URL.revokeObjectURL(url);
+        resolve(null);
+      };
+      img.src = url;
+    });
+  } catch {
+    return null;
+  }
+}
+
+/**
  * Generate a pristine, single-page Landscape A4 PDF of the team planning
  * with DATES IN ROWS and EMPLOYEES IN COLUMNS (inverted as requested),
  * strictly guaranteeing that the month banner, all dates, and footer fit on 1 SINGLE PAGE.
  */
-export function exportTeamPlanningToPDF({
+export async function exportTeamPlanningToPDF({
   monthKey,
   monthLabel,
   employees,
@@ -48,6 +91,7 @@ export function exportTeamPlanningToPDF({
   storeName,
 }: ExportTeamPdfOptions) {
   const effectiveStore = (storeName || getStoreName()).trim();
+  const logoDataUrl = await getLogoFullLightDataUrl();
   // A4 Landscape: 297mm x 210mm
   const doc = new jsPDF({
     orientation: 'landscape',
@@ -383,11 +427,28 @@ export function exportTeamPlanningToPDF({
   doc.setLineWidth(0.2);
   doc.line(margin, footerY - 3.5, pageWidth - margin, footerY - 3.5);
 
+  // Bottom Left: Logo logo-full-light.svg + "By NEVO"
+  let leftTextX = margin;
+  if (logoDataUrl) {
+    try {
+      const logoWidth = 18; // 18mm x 4.5mm (4:1 aspect ratio matching 480x120)
+      const logoHeight = 4.5;
+      doc.addImage(logoDataUrl, 'PNG', margin, footerY - 3.2, logoWidth, logoHeight);
+      leftTextX = margin + logoWidth + 2;
+    } catch {
+      leftTextX = margin;
+    }
+  }
+
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(7.5);
+  doc.setTextColor(22, 101, 52); // Vert forêt / sapin officiel
+  doc.text('By NEVO', leftTextX, footerY - 0.2);
+
+  // Bottom Right: Export date & time
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(6.2);
   doc.setTextColor(100, 116, 139);
-
-  // Right: Export date & time
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(22, 101, 52);
   doc.text(`Document exporté le ${exportTimestamp} · ${effectiveStore}`, pageWidth - margin, footerY, {
