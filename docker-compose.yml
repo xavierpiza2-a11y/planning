@@ -1,7 +1,7 @@
 services:
   planning:
     build: .
-    container_name: planning-equipe
+    container_name: CanoShift
     restart: unless-stopped
     ports:
       - "3000:3000"

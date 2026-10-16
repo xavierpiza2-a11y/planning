@@ -427,7 +427,7 @@ export async function exportTeamPlanningToPDF({
   doc.setLineWidth(0.2);
   doc.line(margin, footerY - 3.5, pageWidth - margin, footerY - 3.5);
 
-  // Bottom Left: Logo logo-full-light.svg + "By NEVO"
+  // Bottom Left: Logo logo-full-light.svg 
   let leftTextX = margin;
   if (logoDataUrl) {
     try {

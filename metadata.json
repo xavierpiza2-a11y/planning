@@ -1,6 +1,6 @@
 {
-  "name": "Planning v1.2",
-  "description": "Application mobile de gestion et consultation des plannings de d'équipe pour magasin.",
+  "name": "CanoShift v1.2",
+  "description": "Application mobile de gestion et consultation des plannings d'équipe pour magasin.",
   "requestFramePermissions": [],
   "majorCapabilities": [
     "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"

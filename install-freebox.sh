@@ -1,13 +1,13 @@
 #!/bin/bash
 # ==============================================================================
-# Script de déploiement automatique Docker pour Planning Pro
-# Compatible : VM Freebox OS (Delta / Ultra), Ubuntu, Debian, VPS
+# Script de déploiement automatique Docker pour CanoShift WebApp by NEVO
+# Compatible : VM, Ubuntu, Debian, VPS
 # ==============================================================================
 
 set -e
 
 echo "=========================================================="
-echo "🚀 Déploiement de Planning Pro (Mode 100% Autonome Docker)"
+echo "🚀 Déploiement de CanoShift by NEVO (Mode 100% Autonome Docker)"
 echo "=========================================================="
 
 # 1. Vérification des droits root

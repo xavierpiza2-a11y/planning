@@ -1,13 +1,13 @@
 #!/bin/bash
 # ==============================================================================
-# Script de mise à jour automatique depuis GitHub pour Planning Pro
-# Compatible : VM Freebox OS (Delta / Ultra), Ubuntu, Debian, VPS
+# Script de mise à jour automatique depuis GitHub pour CanoShift by NEVO
+# Compatible : VM, Ubuntu, Debian, VPS
 # ==============================================================================
 
 set -e
 
 echo "=========================================================="
-echo "🔄 Mise à jour de Planning Pro depuis GitHub"
+echo "🔄 Mise à jour de CanoShift by NEVO depuis GitHub"
 echo "=========================================================="
 
 APP_DIR=$(pwd)

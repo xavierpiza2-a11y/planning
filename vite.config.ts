@@ -14,8 +14,8 @@ export default defineConfig(() => {
         includeAssets: ['icon.svg', 'icon-192.png', 'icon-512.png'],
         manifest: {
           id: '/',
-          name: 'Planning Pro · Équipe',
-          short_name: 'Planning',
+          name: 'CanoShift · by NEVO',
+          short_name: 'CanoShift',
           description: 'Planning des équipes avec gestion Excel autonome',
           theme_color: '#166534',
           background_color: '#166534',

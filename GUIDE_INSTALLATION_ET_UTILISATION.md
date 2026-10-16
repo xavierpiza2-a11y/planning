@@ -1,5 +1,5 @@
 # Guide Complet d'Installation, Déploiement et Utilisation (de A à Z)
-## Planning Pro · Équipe (Mode 100% Autonome Docker)
+## CanoShift · by NEVO (Mode 100% Autonome Docker)
 
 Ce document contient l'ensemble des procédures détaillées pas à pas pour :
 1. **Le déploiement de l'application sur VM Freebox OS (Delta / Ultra) ou tout serveur Linux avec Docker**
@@ -136,7 +136,7 @@ Dans l'onglet **Administration** > **Serveur & Sauvegardes** :
 
 ### 3.1 Premier accès & Jeton de sécurité
 - Dès l'ouverture de l'application, un écran de contrôle d'accès sécurise le planning.
-- **Jeton d'accès par défaut** : tapez simplement `PLANNING` (en majuscules ou minuscules) et validez.
+- **Jeton d'accès par défaut** : tapez simplement `CANOSHIFT` (en majuscules ou minuscules) et validez.
 - Vous pouvez à tout moment modifier ce jeton dans **Administration** > **Magasin & Sécurité** > champ « Jeton d'accès API requis ».
 
 ### 3.2 Sélection du profil salarié
@@ -159,11 +159,11 @@ Dans l'onglet **Administration** > **Serveur & Sauvegardes** :
 ### 3.5 Vue Statistiques & Heures
 - Graphiques analytiques mensuels.
 - Répartition des heures travaillées par employé.
-- Décompte des samedis travaillés, des ouvertures, des fermetures et des congés payés.
+- Décompte des heures/jours travaillés, des ouvertures, des fermetures et des congés payés.
 
 ### 3.6 Espace Administrateur & Responsable
 - Cliquez sur l'onglet **Admin** dans la barre de navigation inférieure.
-- **Code PIN par défaut** : `987654` (personnalisable).
+- **Code PIN par défaut** : `000000` (personnalisable).
 - L'administration est organisée en 5 onglets :
   1. **Magasin & Sécurité** : Nom de l'établissement, jeton d'accès et code PIN.
   2. **Équipe & Salariés** : Ajout, modification, couleurs et droits des salariés.
