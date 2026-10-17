@@ -3,6 +3,7 @@ import { verifyApiTokenWithStore, setApiToken, setActiveStore } from '../service
 import { KeyRound, ShieldCheck, ArrowRight, AlertCircle, Eye, EyeOff, Lock, Store, Sun, Moon } from 'lucide-react';
 import { SuperAdminModal } from './SuperAdminModal';
 import { AppLogo } from './AppLogo';
+import { BrandFooter } from './BrandFooter';
 import { useTheme } from '../hooks/useTheme';
 
 interface TokenGateProps {
@@ -186,6 +187,8 @@ export const TokenGate: React.FC<TokenGateProps> = ({ storeName, infoMessage, on
             </p>
           </div>
         </div>
+
+        <BrandFooter className="pt-2 pb-0" />
       </div>
 
       {/* Super Admin Modal */}

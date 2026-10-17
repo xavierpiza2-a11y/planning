@@ -51,11 +51,11 @@ async function getLogoFullLightDataUrl(): Promise<string | null> {
       img.onload = () => {
         try {
           const canvas = document.createElement('canvas');
-          canvas.width = 960;
-          canvas.height = 240;
+          canvas.width = 480;
+          canvas.height = 120;
           const ctx = canvas.getContext('2d');
           if (ctx) {
-            ctx.drawImage(img, 0, 0, 960, 240);
+            ctx.drawImage(img, 0, 0, 480, 120);
             const dataUrl = canvas.toDataURL('image/png');
             URL.revokeObjectURL(url);
             resolve(dataUrl);
@@ -420,42 +420,38 @@ export async function exportTeamPlanningToPDF({
     minute: '2-digit',
   });
 
-  // Logo: 30mm de large, ratio 4:1 conservé (canvas 960x240) => 7.5mm de haut
-  const logoWidth = 30;
-  const logoHeight = logoWidth / 4;
+  const footerY = pageHeight - margin + 1.5;
 
-  // Le logo se termine exactement sur la marge basse de la page
-  const logoY = pageHeight - margin - logoHeight; // 198mm
-  const logoCenterY = logoY + logoHeight / 2;
-
-  // Thin separator line (remontée pour laisser la place au logo plus grand)
+  // Thin separator line
   doc.setDrawColor(203, 213, 225);
   doc.setLineWidth(0.2);
-  doc.line(margin, logoY - 1.5, pageWidth - margin, logoY - 1.5);
+  doc.line(margin, footerY - 3.5, pageWidth - margin, footerY - 3.5);
 
-  // Bottom Left: Logo logo-full-light.svg + petit texte "By NEVO" juste à côté
+  // Bottom Left: Logo logo-full-light.svg 
   let leftTextX = margin;
   if (logoDataUrl) {
     try {
-      doc.addImage(logoDataUrl, 'PNG', margin, logoY, logoWidth, logoHeight);
-      leftTextX = margin + logoWidth + 1.5;
+      const logoWidth = 18; // 18mm x 4.5mm (4:1 aspect ratio matching 480x120)
+      const logoHeight = 4.5;
+      doc.addImage(logoDataUrl, 'PNG', margin, footerY - 3.2, logoWidth, logoHeight);
+      leftTextX = margin + logoWidth + 2;
     } catch {
       leftTextX = margin;
     }
   }
 
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(5); // plus petit qu'avant (7.5)
+  doc.setFontSize(7.5);
   doc.setTextColor(22, 101, 52); // Vert forêt / sapin officiel
-  doc.text('By NEVO', leftTextX, logoCenterY + 0.6);
+  doc.text('By NEVO', leftTextX, footerY - 0.2);
 
-  // Bottom Right: Export date & time (alignée verticalement avec le logo)
+  // Bottom Right: Export date & time
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(6.2);
   doc.setTextColor(100, 116, 139);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(22, 101, 52);
-  doc.text(`Document exporté le ${exportTimestamp} · ${effectiveStore}`, pageWidth - margin, logoCenterY + 0.8, {
+  doc.text(`Document exporté le ${exportTimestamp} · ${effectiveStore}`, pageWidth - margin, footerY, {
     align: 'right',
   });
 

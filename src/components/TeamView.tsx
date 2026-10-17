@@ -113,7 +113,7 @@ export const TeamView: React.FC<TeamViewProps> = ({
   } | null>(null);
 
   const tableContainerRef = useRef<HTMLDivElement | null>(null);
-  const todayHeaderRef = useRef<HTMLTableHeaderCellElement | null>(null);
+  const todayRowRef = useRef<HTMLTableRowElement | null>(null);
 
   // Month label
   const currentMonthItem = useMemo(() => {
@@ -161,6 +161,7 @@ export const TeamView: React.FC<TeamViewProps> = ({
       dayNumber: number;
       dayNameShort: string;
       dayNameFull: string;
+      dayOfWeek: number;
       isWeekend: boolean;
     }> = [];
 
@@ -177,6 +178,7 @@ export const TeamView: React.FC<TeamViewProps> = ({
         dayNumber: d,
         dayNameShort: dayNameShort.replace('.', ''),
         dayNameFull,
+        dayOfWeek,
         isWeekend,
       });
     }
@@ -198,10 +200,10 @@ export const TeamView: React.FC<TeamViewProps> = ({
     }
   };
 
-  // Scroll to today's column in the matrix view
-  const scrollToTodayColumn = () => {
-    if (todayHeaderRef.current) {
-      todayHeaderRef.current.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+  // Scroll to today's row in the matrix view
+  const scrollToTodayRow = () => {
+    if (todayRowRef.current) {
+      todayRowRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
   };
 
@@ -279,12 +281,12 @@ export const TeamView: React.FC<TeamViewProps> = ({
   const currentDayIndex = monthDays.findIndex((m) => m.dateKey === selectedDate);
   const isMonthContainingToday = monthDays.some((m) => m.dateKey === todayStr);
 
-  // Auto-scroll to today's column in the matrix view
+  // Auto-scroll to today's row in the matrix view
   React.useEffect(() => {
     if (!isLoading && viewMode === 'matrix' && isMonthContainingToday) {
       const doScroll = () => {
-        if (todayHeaderRef.current) {
-          todayHeaderRef.current.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+        if (todayRowRef.current) {
+          todayRowRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }
       };
       const t1 = setTimeout(doScroll, 100);
@@ -379,7 +381,7 @@ export const TeamView: React.FC<TeamViewProps> = ({
   React.useEffect(() => {
     if (viewMode === 'matrix' && isMonthContainingToday) {
       const timer = setTimeout(() => {
-        scrollToTodayColumn();
+        scrollToTodayRow();
       }, 120);
       return () => clearTimeout(timer);
     }
@@ -476,7 +478,7 @@ export const TeamView: React.FC<TeamViewProps> = ({
         <div className="flex items-center gap-2">
           {viewMode === 'matrix' && isMonthContainingToday && (
             <button
-              onClick={scrollToTodayColumn}
+              onClick={scrollToTodayRow}
               className="text-xs font-medium text-emerald-800 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 px-2.5 py-1.5 rounded-lg transition-colors flex items-center gap-1 shrink-0"
             >
               <CalendarCheck className="w-3.5 h-3.5 text-emerald-600" />
@@ -504,162 +506,148 @@ export const TeamView: React.FC<TeamViewProps> = ({
           <div className="h-16 bg-slate-200/60 rounded-xl animate-pulse" />
         </div>
       ) : viewMode === 'matrix' ? (
-        /* VUE MENSUELLE ÉQUIPE : NOMS DE SALARIÉS EN COLONNE (À GAUCHE) ET DATES EN LIGNE AU-DESSUS (EN-TÊTE) */
-        <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-xs">
+        <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-xs">
           <div ref={tableContainerRef} className="overflow-x-auto max-h-[75vh] overflow-y-auto">
             <table className="w-full border-collapse text-left text-xs">
-              {/* Ligne au-dessus : Les dates du mois avec nom du jour + numéro */}
-              <thead className="sticky top-0 z-30 bg-slate-50/95 backdrop-blur-xs shadow-xs">
-                <tr className="border-b border-slate-200">
-                  {/* Colonne fixe des salariés à gauche */}
-                  <th className="sticky left-0 z-40 bg-slate-100/95 backdrop-blur-xs p-3 font-bold text-slate-800 min-w-[110px] border-r border-slate-200 shadow-xs">
-                    Salarié
+              <thead className="sticky top-0 z-30 bg-slate-50/95 dark:bg-slate-900/95 backdrop-blur-xs shadow-xs border-b border-slate-200 dark:border-slate-800">
+                <tr>
+                  <th className="sticky left-0 z-40 bg-slate-100/95 dark:bg-slate-800/95 backdrop-blur-xs p-3 font-bold text-slate-800 dark:text-slate-200 min-w-[120px] sm:min-w-[140px] border-r border-slate-200 dark:border-slate-700 shadow-xs">
+                    <div className="flex items-center gap-1.5">
+                      <Calendar className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                      <span>Date</span>
+                    </div>
                   </th>
 
-                  {/* Dates en ligne au-dessus */}
-                  {monthDays.map((d) => {
-                    const isToday = d.dateKey === todayStr;
-
-                    return (
-                      <th
-                        key={d.dateKey}
-                        ref={isToday ? todayHeaderRef : null}
-                        className={`p-2 text-center min-w-[70px] border-r border-slate-200 select-none ${
-                          isToday
-                            ? 'bg-emerald-100/90 text-emerald-950 font-bold'
-                            : d.isWeekend
-                            ? 'bg-slate-100/70 text-slate-500'
-                            : 'text-slate-700'
-                        }`}
-                      >
-                        <div className="flex flex-col items-center justify-center leading-tight">
-                          <span
-                            className={`text-[10px] uppercase font-bold ${
-                              isToday
-                                ? 'text-emerald-800'
-                                : d.isWeekend
-                                ? 'text-slate-400'
-                                : 'text-slate-500'
-                            }`}
+                  {filteredEmployees.map((emp) => (
+                    <th
+                      key={emp.name}
+                      className="p-2.5 text-center min-w-[105px] sm:min-w-[125px] border-r border-slate-200 dark:border-slate-800 select-none"
+                    >
+                      <div className="flex flex-col items-center justify-center gap-1">
+                        <div className="flex items-center justify-center gap-1.5 w-full">
+                          <div
+                            className="w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold text-white shrink-0 shadow-2xs"
+                            style={{ backgroundColor: emp.color }}
                           >
-                            {d.dayNameShort}
-                          </span>
+                            {emp.name.charAt(0)}
+                          </div>
                           <span
-                            className={`text-sm font-extrabold mt-0.5 tabular-nums ${
-                              isToday
-                                ? 'w-6 h-6 rounded-full bg-emerald-600 text-white flex items-center justify-center'
-                                : ''
-                            }`}
+                            className="font-bold text-slate-900 dark:text-slate-100 truncate max-w-[85px]"
+                            title={emp.name}
                           >
-                            {d.dayNumber}
+                            {emp.name}
                           </span>
                         </div>
-                      </th>
-                    );
-                  })}
-                </tr>
-              </thead>
-
-              {/* Lignes du tableau : 1 ligne par salarié */}
-              <tbody className="divide-y divide-slate-100">
-                {/* Ligne "Infos / Événements du jour" (en dessous de l'en-tête de date, bien lisible) */}
-                <tr className="bg-amber-50/70 border-b-2 border-amber-300">
-                  <td className="sticky left-0 z-20 bg-amber-100/95 p-2 font-bold text-amber-950 border-r border-amber-300 shadow-xs whitespace-nowrap">
-                    <div className="flex items-center gap-1.5 text-xs text-amber-900 font-bold">
-                      <Calendar className="w-3.5 h-3.5 text-amber-700 shrink-0" />
-                      <span>Infos du jour</span>
-                    </div>
-                  </td>
-
-                  {monthDays.map((d) => {
-                    const note = monthDayNotes[d.dateKey];
-                    const isToday = d.dateKey === todayStr;
-
-                    return (
-                      <td
-                        key={`day-note-${d.dateKey}`}
-                        onClick={() => handleOpenDayNoteModal(d.dateKey)}
-                        className={`p-1 text-center border-r border-amber-200/80 align-middle cursor-pointer hover:bg-amber-100 transition-colors ${
-                          isToday ? 'bg-amber-100/70' : ''
-                        }`}
-                        title={
-                          note
-                            ? `Information du ${d.dateKey} : ${note} (Cliquer pour modifier)`
-                            : `Cliquer pour ajouter une information le ${d.dateKey}`
-                        }
-                      >
-                        {note ? (
-                          <div className="px-1.5 py-1 rounded bg-amber-100 border border-amber-300 text-amber-950 font-bold text-[10px] leading-snug line-clamp-2 max-w-[85px] mx-auto shadow-2xs">
-                            {note}
-                          </div>
-                        ) : (
-                          <span className="text-[11px] text-slate-300 hover:text-amber-700 font-bold transition-colors">
-                            +
-                          </span>
-                        )}
-                      </td>
-                    );
-                  })}
-                </tr>
-
-                {filteredEmployees.map((emp) => {
-                  const schedule = teamSchedules[emp.name];
-
-                  return (
-                    <tr key={emp.name} className="hover:bg-slate-50/60 transition-colors">
-                      {/* Colonne fixe salarié à gauche avec stylo de modification */}
-                      <td className="sticky left-0 z-20 bg-white p-2.5 font-semibold text-slate-900 border-r border-slate-200 whitespace-nowrap shadow-xs">
-                        <div className="flex items-center justify-between gap-1.5 w-full">
-                          <div className="flex items-center gap-2 min-w-0">
-                            <div
-                              className="w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold text-white shrink-0 shadow-2xs"
-                              style={{ backgroundColor: emp.color }}
-                            >
-                              {emp.name.charAt(0)}
-                            </div>
-                            <span className="truncate max-w-[85px]">{emp.name}</span>
-                          </div>
+                        {isCurrentlyAdminActive && (
                           <button
                             type="button"
                             onClick={() => handleRequestShiftEdit(emp.name, selectedDate)}
-                            className="p-1 rounded-md text-slate-400 hover:text-amber-700 hover:bg-amber-50 transition-colors"
-                            title={`Modifier l'horaire de ${emp.name} (Accès Administrateur · PIN)`}
+                            className="p-1 rounded text-slate-400 hover:text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-950/40 transition-colors"
+                            title={`Modifier l'horaire de ${emp.name}`}
                           >
-                            <Edit3 className="w-3.5 h-3.5" />
+                            <Edit3 className="w-3 h-3" />
                           </button>
+                        )}
+                      </div>
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+
+              <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                {monthDays.map((d) => {
+                  const isToday = d.dateKey === todayStr;
+                  const isSunday = d.dayOfWeek === 0;
+                  const note = monthDayNotes[d.dateKey];
+
+                  return (
+                    <tr
+                      key={d.dateKey}
+                      ref={isToday ? todayRowRef : null}
+                      className={`transition-colors ${
+                        isToday
+                          ? 'bg-emerald-500/10 dark:bg-emerald-500/15'
+                          : d.isWeekend
+                          ? 'bg-slate-50/70 dark:bg-slate-800/25'
+                          : 'hover:bg-slate-50/60 dark:hover:bg-slate-800/40'
+                      } ${isSunday ? 'border-b-2 border-slate-300 dark:border-slate-700' : ''}`}
+                    >
+                      <td
+                        className={`sticky left-0 z-20 p-2 border-r border-slate-200 dark:border-slate-800 shadow-xs whitespace-nowrap ${
+                          isToday
+                            ? 'bg-emerald-100/95 dark:bg-emerald-950/95 text-emerald-950 dark:text-emerald-100'
+                            : d.isWeekend
+                            ? 'bg-slate-100/95 dark:bg-slate-800/95 text-slate-700 dark:text-slate-300'
+                            : 'bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200'
+                        }`}
+                      >
+                        <div className="flex flex-col gap-1">
+                          <div className="flex items-center gap-2">
+                            <span
+                              className={`text-[10px] uppercase font-bold ${
+                                isToday
+                                  ? 'text-emerald-700 dark:text-emerald-400 font-extrabold'
+                                  : d.isWeekend
+                                  ? 'text-slate-400 dark:text-slate-500'
+                                  : 'text-slate-500 dark:text-slate-400'
+                              }`}
+                            >
+                              {d.dayNameShort}
+                            </span>
+                            <span
+                              className={`text-xs font-black tabular-nums ${
+                                isToday
+                                  ? 'px-1.5 py-0.5 rounded-full bg-emerald-600 text-white shadow-2xs'
+                                  : ''
+                              }`}
+                            >
+                              {String(d.dayNumber).padStart(2, '0')}
+                            </span>
+                          </div>
+
+                          <div
+                            onClick={() => handleOpenDayNoteModal(d.dateKey)}
+                            className="cursor-pointer"
+                            title={
+                              note
+                                ? `Information : ${note} (Cliquer pour modifier)`
+                                : `Ajouter une information pour ce jour`
+                            }
+                          >
+                            {note ? (
+                              <div className="px-1.5 py-0.5 rounded bg-amber-100 dark:bg-amber-900/50 border border-amber-300 dark:border-amber-700 text-amber-950 dark:text-amber-200 text-[10px] font-bold leading-tight truncate max-w-[110px] shadow-2xs">
+                                📌 {note}
+                              </div>
+                            ) : (
+                              <span className="text-[10px] text-slate-300 dark:text-slate-600 hover:text-amber-600 dark:hover:text-amber-400 transition-colors">
+                                + note
+                              </span>
+                            )}
+                          </div>
                         </div>
                       </td>
 
-                      {/* Colonnes dates */}
-                      {monthDays.map((d) => {
+                      {filteredEmployees.map((emp) => {
+                        const schedule = teamSchedules[emp.name];
                         const dayData = schedule?.days ? schedule.days[d.dateKey] : undefined;
                         const shift = dayData?.shift || '';
                         const hours = dayData?.hours;
-                        const isToday = d.dateKey === todayStr;
 
                         return (
                           <td
-                            key={d.dateKey}
+                            key={`${emp.name}-${d.dateKey}`}
                             onClick={() => handleRequestShiftEdit(emp.name, d.dateKey, shift, hours)}
-                            className={`p-1.5 text-center border-r border-slate-100 align-middle transition-colors cursor-pointer hover:bg-emerald-100/70 hover:ring-1 hover:ring-emerald-500 ${
-                              isToday
-                                ? 'bg-emerald-50/50'
-                                : d.isWeekend
-                                ? 'bg-slate-50/40'
-                                : ''
+                            className={`p-1.5 text-center border-r border-slate-100 dark:border-slate-800 align-middle transition-colors cursor-pointer hover:bg-emerald-100/70 dark:hover:bg-emerald-900/40 hover:ring-1 hover:ring-emerald-500 ${
+                              isToday ? 'bg-emerald-50/30 dark:bg-emerald-950/20' : ''
                             }`}
-                            title={`Cliquer pour modifier l'horaire de ${emp.name} le ${d.dateKey} (Accès Administrateur · PIN)`}
+                            title={`Cliquer pour modifier l'horaire de ${emp.name} le ${d.dateKey}`}
                           >
                             {shift || hours ? (
                               <div className="flex flex-col items-center justify-center">
-                                <ShiftBadge
-                                  shift={shift}
-                                  hours={hours}
-                                  compact={true}
-                                />
+                                <ShiftBadge shift={shift} hours={hours} compact={true} />
                               </div>
                             ) : (
-                              <span className="text-[10px] text-slate-300">·</span>
+                              <span className="text-[11px] text-slate-300 dark:text-slate-600">·</span>
                             )}
                           </td>
                         );

@@ -157,21 +157,71 @@ export async function initDatabase(): Promise<{
     }
 
     if (fs.existsSync(STORES_JSON_PATH)) {
-      const raw = fs.readFileSync(STORES_JSON_PATH, 'utf-8');
-      storesRegistry = JSON.parse(raw);
+      try {
+        const raw = fs.readFileSync(STORES_JSON_PATH, 'utf-8');
+        storesRegistry = JSON.parse(raw);
+        if (!Array.isArray(storesRegistry)) {
+          storesRegistry = [];
+        }
+      } catch {
+        storesRegistry = [];
+      }
     } else {
       storesRegistry = [];
     }
 
-    // Auto-migrate from legacy single store if registry is empty
+    // Auto-discover any existing store files in data/stores
+    const existingStoreFiles = fs.existsSync(STORES_DIR)
+      ? fs.readdirSync(STORES_DIR).filter((f) => f.endsWith('.json') && !f.endsWith('.tmp'))
+      : [];
+
+    for (const file of existingStoreFiles) {
+      const alreadyRegistered = storesRegistry.some((s) => s.dataFile === file);
+      if (!alreadyRegistered) {
+        try {
+          const filePath = path.join(STORES_DIR, file);
+          const content = fs.readFileSync(filePath, 'utf-8');
+          const parsed = JSON.parse(content);
+          if (parsed && parsed.config) {
+            const storeId = file.replace('.json', '');
+            const discoveredStore: StoreInfo = {
+              id: storeId,
+              name: parsed.config.storeName || storeId,
+              token: (parsed.config.apiToken || DEFAULT_API_TOKEN).trim().toUpperCase(),
+              adminPin: parsed.config.adminPin || DEFAULT_ADMIN_PIN,
+              createdAt: new Date().toISOString(),
+              dataFile: file,
+            };
+            storesRegistry.push(discoveredStore);
+          }
+        } catch {
+          // ignore invalid file
+        }
+      }
+    }
+
+    // Auto-migrate from legacy single store or create initial store if registry is still empty
     if (storesRegistry.length === 0) {
-      console.log('Stores registry is empty. Checking for legacy database file...');
       let initialData: DatabaseState | null = null;
       let initialName = DEFAULT_STORE_NAME;
       let initialToken = DEFAULT_API_TOKEN;
       let initialPin = DEFAULT_ADMIN_PIN;
 
-      if (fs.existsSync(LEGACY_DB_JSON_PATH)) {
+      const mainStorePath = path.join(STORES_DIR, 'store_main.json');
+      if (fs.existsSync(mainStorePath)) {
+        try {
+          const content = fs.readFileSync(mainStorePath, 'utf-8');
+          const parsed = JSON.parse(content);
+          if (parsed && parsed.config) {
+            initialData = parsed;
+            initialName = parsed.config.storeName || DEFAULT_STORE_NAME;
+            initialToken = (parsed.config.apiToken || DEFAULT_API_TOKEN).trim().toUpperCase();
+            initialPin = parsed.config.adminPin || DEFAULT_ADMIN_PIN;
+          }
+        } catch {
+          // ignore
+        }
+      } else if (fs.existsSync(LEGACY_DB_JSON_PATH)) {
         try {
           const content = fs.readFileSync(LEGACY_DB_JSON_PATH, 'utf-8');
           const parsed = JSON.parse(content);
@@ -180,10 +230,9 @@ export async function initDatabase(): Promise<{
             initialName = parsed.config.storeName || DEFAULT_STORE_NAME;
             initialToken = (parsed.config.apiToken || DEFAULT_API_TOKEN).trim().toUpperCase();
             initialPin = parsed.config.adminPin || DEFAULT_ADMIN_PIN;
-            console.log(`Migrated existing store data: « ${initialName} » (Token: ${initialToken})`);
           }
-        } catch (e) {
-          console.error('Error reading legacy database file during migration:', e);
+        } catch {
+          // ignore
         }
       }
 
@@ -200,10 +249,14 @@ export async function initDatabase(): Promise<{
       saveStoresRegistryFile();
 
       const storeFilePath = path.join(STORES_DIR, defaultStore.dataFile);
-      const dataToSave = initialData || createDefaultState(initialName, initialToken, initialPin);
-      fs.writeFileSync(storeFilePath, JSON.stringify(dataToSave, null, 2), 'utf-8');
-      storeDatabases.set(defaultStore.id, dataToSave);
-      storeLastSavedAt.set(defaultStore.id, new Date().toISOString());
+      if (!fs.existsSync(storeFilePath) || initialData) {
+        const dataToSave = initialData || createDefaultState(initialName, initialToken, initialPin);
+        fs.writeFileSync(storeFilePath, JSON.stringify(dataToSave, null, 2), 'utf-8');
+        storeDatabases.set(defaultStore.id, dataToSave);
+        storeLastSavedAt.set(defaultStore.id, new Date().toISOString());
+      }
+    } else {
+      saveStoresRegistryFile();
     }
 
     // Load all registered store files into memory

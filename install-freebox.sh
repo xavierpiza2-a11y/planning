@@ -33,8 +33,8 @@ else
 fi
 
 # 3. Création du dossier de données persistantes
-mkdir -p "$APP_DIR/data"
-chmod 777 "$APP_DIR/data"
+mkdir -p "$APP_DIR/data/stores"
+chmod -R 777 "$APP_DIR/data"
 
 # 4. Configuration du fichier d'environnement (.env)
 if [ ! -f "$APP_DIR/.env" ] && [ -f "$APP_DIR/.env.example" ]; then

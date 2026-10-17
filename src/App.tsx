@@ -43,6 +43,7 @@ import { ProfileSelectorModal } from './components/ProfileSelectorModal';
 import { ChangesModal } from './components/ChangesModal';
 import { HistoryModal } from './components/HistoryModal';
 import { PWAInstallBanner } from './components/PWAInstallBanner';
+import { BrandFooter } from './components/BrandFooter';
 import { TokenGate } from './components/TokenGate';
 import { WifiOff, UserCheck } from 'lucide-react';
 import { useTheme } from './hooks/useTheme';
@@ -646,7 +647,7 @@ export default function App() {
 
   // 2. Main App Screen once token is validated
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col antialiased text-slate-900 dark:text-slate-100 transition-colors duration-150">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col antialiased text-slate-900 dark:text-slate-100 transition-colors duration-150 relative">
       {/* PWA Banner */}
       <PWAInstallBanner />
 
@@ -752,6 +753,9 @@ export default function App() {
             onBackToPlanning={() => setActiveTab('my-planning')}
           />
         )}
+
+        {/* Logo de marque centré et visible en bas de chaque vue */}
+        <BrandFooter className="mt-8" />
       </main>
 
       {/* Bottom Navigation */}

@@ -89,9 +89,21 @@
     <meta name="apple-mobile-web-app-title" content="CanoShift" />
     <link rel="apple-touch-icon" href="/icon-192.png" />
     <link rel="icon" type="image/svg+xml" href="/icon.svg" />
-    <link rel="manifest" href="/manifest.webmanifest" />
+    <script>
+      (function() {
+        try {
+          var saved = localStorage.getItem('canoshift_theme');
+          var isDark = saved ? saved === 'dark' : true;
+          if (isDark) {
+            document.documentElement.classList.add('dark');
+          } else {
+            document.documentElement.classList.remove('dark');
+          }
+        } catch (e) {}
+      })();
+    </script>
   </head>
-  <body class="h-full bg-slate-950 text-slate-100 antialiased selection:bg-emerald-600 selection:text-white dark">
+  <body class="h-full bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 antialiased selection:bg-emerald-600 selection:text-white transition-colors duration-200">
     <div id="root" class="h-full"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>

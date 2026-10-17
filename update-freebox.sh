@@ -1,7 +1,7 @@
 #!/bin/bash
 # ==============================================================================
 # Script de mise à jour automatique depuis GitHub pour CanoShift by NEVO
-# Compatible : VM, Ubuntu, Debian, VPS
+# Compatible : VM Freebox, Ubuntu, Debian, VPS
 # ==============================================================================
 
 set -e
@@ -11,30 +11,41 @@ echo "🔄 Mise à jour de CanoShift by NEVO depuis GitHub"
 echo "=========================================================="
 
 APP_DIR=$(pwd)
+TIMESTAMP=$(date +%Y%m%d_%H%M%S)
 
-# 1. Sauvegarde préventive de sécurité de la base de données actuelle
-if [ -f "$APP_DIR/data/planning_db.json" ]; then
-  TIMESTAMP=$(date +%Y%m%d_%H%M%S)
-  BACKUP_FILE="$APP_DIR/data/planning_db_backup_${TIMESTAMP}.json"
-  cp "$APP_DIR/data/planning_db.json" "$BACKUP_FILE"
-  cp "$APP_DIR/data/planning_db.json" /tmp/planning_db_restore_temp.json
-  echo "🛡️ Sauvegarde de sécurité créée : $BACKUP_FILE"
+# 1. Sauvegarde préventive intégrale de TOUTES les données (data/)
+TEMP_BACKUP="/tmp/canoshift_data_backup_${TIMESTAMP}"
+PERM_BACKUP="$APP_DIR/backups/data_backup_${TIMESTAMP}"
+
+if [ -d "$APP_DIR/data" ]; then
+  mkdir -p "$TEMP_BACKUP"
+  mkdir -p "$APP_DIR/backups"
+  cp -r "$APP_DIR/data"/* "$TEMP_BACKUP/" 2>/dev/null || true
+  cp -r "$APP_DIR/data" "$PERM_BACKUP" 2>/dev/null || true
+  echo "🛡️ Sauvegarde intégrale de vos données créée :"
+  echo "   -> $PERM_BACKUP"
 fi
 
-# 2. Débloquer Git en cas de conflit sur le fichier de base de données
-git checkout -- data/planning_db.json 2>/dev/null || git stash 2>/dev/null || true
+# 2. Ignorer tout conflit Git sur le dossier data
+git checkout -- data/ 2>/dev/null || true
+git stash -- data/ 2>/dev/null || true
 
 # 3. Récupération des dernières modifications du code depuis GitHub
 echo "📥 Téléchargement des nouveaux fichiers depuis GitHub..."
 git pull origin main || git pull
 
-# 4. Restauration de vos vraies données locales
-if [ -f /tmp/planning_db_restore_temp.json ]; then
-  cp /tmp/planning_db_restore_temp.json "$APP_DIR/data/planning_db.json"
-  rm -f /tmp/planning_db_restore_temp.json
+# 4. Restauration prioritaire de TOUTES vos données locales (magasins, plannings, notes)
+if [ -d "$TEMP_BACKUP" ] && [ "$(ls -A "$TEMP_BACKUP" 2>/dev/null)" ]; then
+  echo "♻️ Restauration de vos plannings et configurations..."
+  mkdir -p "$APP_DIR/data/stores"
+  cp -r "$TEMP_BACKUP"/* "$APP_DIR/data/" 2>/dev/null || true
+  rm -rf "$TEMP_BACKUP"
 fi
 
-# 5. Reconstruction et relance du conteneur avec la nouvelle version
+# 5. Garantir les permissions d'écriture complètes pour Docker
+chmod -R 777 "$APP_DIR/data" 2>/dev/null || true
+
+# 6. Reconstruction et relance du conteneur avec la nouvelle version
 echo "🐳 Reconstruction du conteneur Docker avec les nouveaux fichiers..."
 docker compose up -d --build
 
