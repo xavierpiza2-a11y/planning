@@ -74,11 +74,11 @@ export const AppLogo: React.FC<AppLogoProps> = ({
   // If full logo with typography (rectangular)
   if (variant === 'full' || variant === 'full-dark' || variant === 'full-light') {
     const fullHeightClasses = {
-      xs: 'h-6',
-      sm: 'h-8',
-      md: 'h-10',
-      lg: 'h-14',
-      xl: 'h-18',
+      xs: 'h-8',
+      sm: 'h-10',
+      md: 'h-12',
+      lg: 'h-16',
+      xl: 'h-20',
     }[size];
 
     const currentSrc = candidates[candidateIndex];

@@ -80,17 +80,12 @@ export const TokenGate: React.FC<TokenGateProps> = ({ storeName, infoMessage, on
       <div className="w-full max-w-sm z-10 space-y-5">
         {/* App Brand Header */}
         <div className="text-center space-y-2.5">
-          <div className="flex justify-center">
-            <AppLogo size="lg" variant="square" className="border border-emerald-500/40 shadow-xl shadow-emerald-950/20 dark:shadow-emerald-950/60" />
+          <div className="inline-flex items-center gap-3 px-4 py-2 rounded-2xl bg-white/70 dark:bg-slate-900/70 border border-slate-200/80 dark:border-slate-800/80 shadow-xs">
+            <AppLogo size="xl" variant="full" className="shadow-2xs" />
           </div>
           <div>
-            {/* Title: CanoShift in two green tones like logo-full-light.svg */}
-            <h1 className="text-3xl font-extrabold tracking-tight flex items-center justify-center">
-              <span className="text-[#14532d] dark:text-[#22c55e]">Cano</span>
-              <span className="text-[#16a34a] dark:text-[#4ade80]">Shift</span>
-            </h1>
             <p className="text-xs text-slate-600 dark:text-emerald-400/90 font-semibold mt-1">
-              Gestion des Planning et Temps. By NEVO
+              Gestion des Planning et Temps.
             </p>
           </div>
         </div>
@@ -120,7 +115,7 @@ export const TokenGate: React.FC<TokenGateProps> = ({ storeName, infoMessage, on
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-1.5">
               <label className="text-xs font-semibold text-slate-700 dark:text-slate-300 block">
-                Clé / Jeton d'accès :
+                Clé d'accès :
               </label>
               <div className="relative">
                 <KeyRound className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500" />
@@ -187,8 +182,6 @@ export const TokenGate: React.FC<TokenGateProps> = ({ storeName, infoMessage, on
             </p>
           </div>
         </div>
-
-        <BrandFooter className="pt-2 pb-0" />
       </div>
 
       {/* Super Admin Modal */}

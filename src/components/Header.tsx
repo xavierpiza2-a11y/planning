@@ -34,7 +34,7 @@ export const Header: React.FC<HeaderProps> = ({
       <div className="max-w-5xl mx-auto px-4 h-14 flex items-center justify-between gap-3">
         {/* Brand Zone */}
         <div className="flex items-center gap-2.5 min-w-0">
-          <AppLogo size="sm" variant="square" className="border border-slate-200 dark:border-slate-700/60 shadow-2xs" />
+          <AppLogo size="sm" variant="symbol" className="border border-slate-200 dark:border-slate-700/60 shadow-2xs" />
           <div className="min-w-0">
             <div className="flex items-center gap-2">
               <h1 className="text-sm font-bold tracking-tight text-slate-900 dark:text-white leading-tight truncate flex items-center gap-1">
